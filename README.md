@@ -4,6 +4,9 @@ Using concepts from computational geometry, these CHM implementations allow for 
 # Exact Implementation
 This is a python implementation tested on Python 3.6.9 using `QSopt` (version 2.5.10) for exact linear optimization. 
 
+### Notes 
+Values of the domain must be integers. If necessary, scale all values accordingly.
+
 ### Dependencies
 The [python-qsoptex](https://github.com/jonls/python-qsoptex) module requires the [GMP](https://gmplib.org/) and [QSopt_ex](https://github.com/jonls/qsopt-ex) libraries to be installed.
 

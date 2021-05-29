@@ -1,13 +1,13 @@
 
-from chm import CHM
+from chm_double import CHM
 import time
 
 reactions = [0, 2, 71] 
 
 chm = CHM(reactions)
 
-chm.set_stoichiometric_matrix("Aeq.txt")
-chm.set_reaction_domains("domains.txt")
+chm.set_stoichiometric_matrix("../../DATA/Aeq.txt")
+chm.set_reaction_domains("../../DATA/domains.txt")
 
 # It is slightly faster to store the stoichiometric constraints
 # as a gruboi model, rather than reinitializing each time

@@ -5,7 +5,7 @@ import qsoptex
 from sympy import Matrix, sympify
 from fractions import Fraction
 
-def compute_CH(fname, dims, output):
+def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions):
     """
     Computes the convex hull for production envelopes of metabolic network. Solution is 
     the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
@@ -13,33 +13,33 @@ def compute_CH(fname, dims, output):
       - fname_r.txt: list of reaction names - order must follow that of S columns
       - fname_S.txt: Stoichiometric matrix
       - fname_d.txt : lb ub for each reaction
-    * dims: list of indices for the dimensions onto which the CH should be computed
+    * impt_reactions: list of indices for the dimensions onto which the CH should be computed
     """
     global RIDS
     global lp_prob
 
-    lp_data = read_problem(fname)
+    lp_data = read_problem(reactions_path, s_matrix_path, domains_path)
     obj = [0] * lp_data["Aeq"].shape[1]
-    obj[dims[0]] = 1
+    obj[impt_reactions[0]] = 1
     lp_prob = create_lp(lp_data, obj)
 
     RIDS = lp_data["rids"]
 
 
     # INITIAL POINTS
-    epts = initial_points(dims, output)
+    epts = initial_points(impt_reactions)
    
     # INITIAL HULL
-    chull = initial_hull(epts, dims, output)
+    chull = initial_hull(epts, impt_reactions)
 
     # INCREMENTAL REFINEMENT
-    [chull, epts] = incremental_refinement(chull, epts, dims, output)
-    print("\t".join([RIDS[d] for d in dims]), file = output)
+    [chull, epts] = incremental_refinement(chull, epts, impt_reactions)
+    print("\t".join([RIDS[d] for d in impt_reactions]))
     for e in range(epts.shape[1]):
-        print("\t".join([str(epts[d, e]) for d in dims]), file = output)
+        print("\t".join([str(epts[d, e]) for d in impt_reactions]))
 
 
-def extreme_point(h, h0, optim, dims, output):
+def extreme_point(h, h0, optim, dims):
     """
     Computes the extreme point of the projection
     """
@@ -47,11 +47,11 @@ def extreme_point(h, h0, optim, dims, output):
     for i in range(len(dims)):
         obj[dims[i]] = 1
 
-    opt = solve_lp_exact(obj, optim, h, h0, output)
+    opt = solve_lp_exact(obj, optim, h, h0)
     return opt
 
 
-def solve_lp_exact(obj_inds, opt, h_add, h0_add, output):
+def solve_lp_exact(obj_inds, opt, h_add, h0_add):
     """
     Solves LP exactly
     """
@@ -115,7 +115,7 @@ def get_hyperplane(pts, dims):
     return [h, h0]
 
 
-def initial_hull(pnts, dims, output):
+def initial_hull(pnts, dims):
     """
     Computes initial hull for the initial set of extreme points
     """
@@ -131,7 +131,7 @@ def initial_hull(pnts, dims, output):
     return hull
 
 
-def initial_points(dims, output):
+def initial_points(dims):
     """
     Computes Initial set of Extreme Points
     """
@@ -141,28 +141,28 @@ def initial_points(dims, output):
     h[dims[0]] = 1
     h = Matrix([h])
     # max
-    opt = solve_lp_exact(h, -1, [], [], output)
+    opt = solve_lp_exact(h, -1, [], [])
     hx = h * opt
-    eps = extreme_point(h, hx, -1, dims, output)
+    eps = extreme_point(h, hx, -1, dims)
     # min
-    opt = solve_lp_exact(h, 1, [], [], output)
+    opt = solve_lp_exact(h, 1, [], [])
     hx = h * opt
-    ep = extreme_point(h, hx, 1, dims, output)
+    ep = extreme_point(h, hx, 1, dims)
     # if extreme point already in the list of EPs
     if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
         eps = eps.col_insert(eps.shape[1], ep)
     while eps.shape[1] <= len(dims):
         [h, h0] = get_hyperplane(eps, dims)
-        opt = solve_lp_exact(h, 1, [], [], output)
+        opt = solve_lp_exact(h, 1, [], [])
         hx = h * opt
         if hx[0] != h0:
-            ep = extreme_point(h, hx, 1, dims, output)
+            ep = extreme_point(h, hx, 1, dims)
             if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
                 eps = eps.col_insert(eps.shape[1], ep)
         else:
-            opt = solve_lp_exact(h, -1, [], [], output)
+            opt = solve_lp_exact(h, -1, [], [])
             hx = h * opt
-            ep = extreme_point(h, hx, -1, dims, output)
+            ep = extreme_point(h, hx, -1, dims)
             if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
                 eps = eps.col_insert(eps.shape[1], ep)
     return eps
@@ -189,14 +189,14 @@ def create_lp(polyt, obj_inds):
     return p
 
 
-def read_problem(fname):
+def read_problem(reactions_path, s_matrix_path, domains_path):
     """
     Read LP problem from 3 files: reactions, Stoichiometric matrix, and constraints
     """
     probl = {}
     # read reaction names
     reac_names = []
-    infile = open(fname + "_r.txt", "r")
+    infile = open(reactions_path, "r") # fname + "_r.txt"
     for line in infile.readlines():
         line = line.strip()
         reac_names.append(line)
@@ -205,7 +205,7 @@ def read_problem(fname):
     # read upper and lower bounds of reactions (domain)
     lbs = []
     ubs = []
-    infile = open(fname + "_d.txt", "r")
+    infile = open(domains_path, "r") # fname + "_d.txt"
     for line in infile.readlines():
         line = line.strip()
         info = line.split()
@@ -215,7 +215,7 @@ def read_problem(fname):
     probl["domain"] = [lbs, ubs]
     # read stoichiometric matrix. Rows=metabolites, columns=reactions
     S = []
-    infile = open(fname + "_S.txt", "r")
+    infile = open(s_matrix_path, "r") # fname + "_S.txt"
     for line in infile.readlines():
         line = line.strip()
         row = []
@@ -230,7 +230,7 @@ def read_problem(fname):
     return probl
 
 
-def incremental_refinement(chull, eps, dims, output):
+def incremental_refinement(chull, eps, dims):
     """
     Refine initial convex hull is refined by maximizing/minimizing the \hps
     containing the \eps until all the facets of the projection are terminal.
@@ -241,12 +241,12 @@ def incremental_refinement(chull, eps, dims, output):
                 break
             h = chull[i][0][0]
             h0 = chull[i][0][1]
-            opt = solve_lp_exact(h, -1, [], [], output)
+            opt = solve_lp_exact(h, -1, [], [])
             hx = h * opt
             if hx[0] == h0:
                 chull[i][2] = 0
             else:
-                ep = extreme_point(h, hx, -1, dims, output)
+                ep = extreme_point(h, hx, -1, dims)
                 if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
                     eps = eps.col_insert(eps.shape[1], ep)
                     chull = update_CH(ep, eps, chull, dims)
@@ -304,7 +304,7 @@ def hp_in_CH(h, h0, v, chull):
     return flag
 
 
-if __name__ == "__main__":
-    filename = sys.argv[1]
-    dims = sys.argv[2]
-    compute_CH(filename, map(int, dims.split(",")))
+# if __name__ == "__main__":
+#     filename = sys.argv[1]
+#     dims = sys.argv[2]
+#     compute_CH(filename, map(int, dims.split(",")))
