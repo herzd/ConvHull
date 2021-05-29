@@ -43,47 +43,45 @@ pip3 install -r req_double.txt
 ```
 
 *Notes*
-- The Python implementation was tested on Python 3.7.6 using `gurobi` (version 9.0.2) for double-precision linear optimization.
-- A `gurobi` license must be downloaded pior to running this implementation
+- The Python implementation was tested on Python 3.7.6 using [`gurobi`](https://www.gurobi.com/) (version 9.0.2) for double-precision linear optimization.
+- A [`gurobi`](https://www.gurobi.com/) license must be downloaded pior to running this implementation
 
 __Double Precision Implementation in MATLAB__
 
-The MATLAB implementation was tested on MATLAB R2020a using `gurobi` (version 9.0.2) for double-precision linear optimization. A `gurobi` license must be downloaded pior to running this implementation. No additional packages, other than the functions outlined in the `.m` files in the `DOUBLE/MATLAB/chm` folder are required. 
+The MATLAB implementation was tested on MATLAB R2020a using [`gurobi`](https://www.gurobi.com/) (version 9.0.2) for double-precision linear optimization. A [`gurobi`](https://www.gurobi.com/) license must be downloaded pior to running this implementation. No additional packages, other than the functions outlined in the `.m` files in the [`DOUBLE/MATLAB/chm`](DOUBLE/MATLAB/chm) folder are required. 
 
 _________________________________________________________________
 
 ## Usage
 
-Please see below for individual use cases of the three different implementation. The following input files should be used to run any of the three implementations: 
+Please see below for individual use cases of the three different implementations. The following input files should be used to run any of the three implementations: 
 - `domains.txt`: contains two columns, the 1st with the lower bounds, the 2nd with the upper bounds
 - `stoichs.txt`: contains the stoichiometric matrix (reactions x metabolites) of the model
 - `reactions.txt`: (optional) contains the name annotations of the reactions as listed in the other two files
 
-Please not that input values for the exact implementation must be integers and that all values should be scaled accordingly. 
+Please note that input **values for the exact implementation must be integers** and that all values should be scaled accordingly. 
 
 __Exact Implementation in Python__
 
-In the `EXACT/Python/` directory create a main file that contains the following lines of code
-```
+Run the [`EXACT/Python/main.py`](EXACT/Python/main.py) file for an example or a variation of the following code:
+```python
 import chm_exact
 reactions = [0, 1] # list of reactions for which to calculate the PE
-data_path = "../../DATA/YOUR_DATA_SET"
+data_path = "YOUR_DATA_SET_FOLDER"
 chm_exact.compute_CH(data_path + "reactions.txt", data_path + "stoichs.txt", \
     data_path + "tdomains.txt", reactions)
 ```
 
-Please run the `EXACT/Python/main.m` file for an example.
-
 
 __Double Precision Implementation in Python__
 
-In the `DOUBLE/Python/` directory create a main file that contains the following lines of code
+Run the [`DOUBLE/Python/main.py`](DOUBLE/Python/main.py) file for an example or a variation of the following code:
 
-```
+```python
 from chm_double import CHM
 reactions = [0, 2, 71] 
 chm = CHM(reactions)
-data_path = "../../DATA/YOUR_DATA_SET"
+data_path = "YOUR_DATA_SET_FOLDER"
 chm.set_stoichiometric_matrix(data_path + "stoichs.txt")
 chm.set_reaction_domains(data_path + "domains.txt")
 chm.set_model()
@@ -92,19 +90,16 @@ hull = chm.initial_hull(init_points)
 (final_points, final_hyperplanes) = chm.incremental_refinement(hull, init_points)
 print("Final Extreme Points...")
 print(final_points)
-```
-
-Please run the `DOUBLE/Python/main.m` file for an example. 
+``` 
 
 
 __Double Precision Implementation in MATLAB__
 
-In the `DOUBLE/MATLAB/chm/` directory create a main file that contains the following lines of code
-```
-data_path = "../../DATA/YOUR_DATA_SET";
+Run the [`DOUBLE/MATLAB/examples/EColi/main.m`](DOUBLE/MATLAB/examples/EColi/main.m) file for an example or a variation of the following code:
+
+```MATLAB
+data_path = "YOUR_DATA_SET_FOLDER";
 domain = load('domain.txt');
-reactions = [1,3]; % list of reactions for which to calculate the PE
+reactions = [1, 3]; % list of reactions for which to calculate the PE
 CH=computeCH(load(data_path + "stoichs.txt",), domain(:,1), domain(:,2), reactions);
 ```
-
-Please run the `DOUBLE/MATLAB/EColi/main.m` file for an example. 
