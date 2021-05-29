@@ -28,7 +28,7 @@ pip3 install -r req_exact.txt
 
 *Notes*
 - Python implementation tested on Python 3.6.9 using `QSopt` (version 2.5.10) for exact linear optimization.
-- The [python-qsoptex](https://github.com/jonls/python-qsoptex) module requires the [GMP](https://gmplib.org/) and [QSopt_ex](https://github.com/jonls/qsopt-ex) libraries to be installed.
+- The [`python-qsoptex`](https://github.com/jonls/python-qsoptex) module requires the [`GMP`](https://gmplib.org/) and [`QSopt_ex`](https://github.com/jonls/qsopt-ex) libraries to be installed.
 - Debian:
     ```
     apt-get install libgmp3-dev
@@ -48,7 +48,11 @@ pip3 install -r req_double.txt
 
 __Double Precision Implementation in MATLAB__
 
-The MATLAB implementation was tested on MATLAB R2020a using [`gurobi`](https://www.gurobi.com/) (version 9.0.2) for double-precision linear optimization. A [`gurobi`](https://www.gurobi.com/) license must be downloaded pior to running this implementation. No additional packages, other than the functions outlined in the `.m` files in the [`DOUBLE/MATLAB/chm`](DOUBLE/MATLAB/chm) folder are required. 
+No additional packages, other than the functions outlined in the `.m` files in the [`DOUBLE/MATLAB/chm`](DOUBLE/MATLAB/chm) folder are required. 
+
+*Notes*
+- The MATLAB implementation was tested on MATLAB R2020a using [`gurobi`](https://www.gurobi.com/) (version 9.0.2) for double-precision linear optimization. 
+- A [`gurobi`](https://www.gurobi.com/) license must be downloaded pior to running this implementation. 
 
 _________________________________________________________________
 
@@ -59,7 +63,8 @@ Please see below for individual use cases of the three different implementations
 - `stoichs.txt`: contains the stoichiometric matrix (reactions x metabolites) of the model
 - `reactions.txt`: (optional) contains the name annotations of the reactions as listed in the other two files
 
-Please note that input **values for the exact implementation must be integers** and that all values should be scaled accordingly. 
+Please note that **input values for the exact implementation must be integers** and that all values should be scaled accordingly. 
+
 
 __Exact Implementation in Python__
 
