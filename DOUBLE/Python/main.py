@@ -6,8 +6,8 @@ reactions = [0, 2, 71]
 
 chm = CHM(reactions)
 
-chm.set_stoichiometric_matrix("../../DATA/Aeq.txt")
-chm.set_reaction_domains("../../DATA/domains.txt")
+chm.set_stoichiometric_matrix("../../DATA/iJO1366-core/core_stoichs.txt")
+chm.set_reaction_domains("../../DATA/iJO1366-core/core_domains.txt")
 
 # It is slightly faster to store the stoichiometric constraints
 # as a gruboi model, rather than reinitializing each time
