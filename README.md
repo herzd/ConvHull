@@ -1,50 +1,106 @@
 # Convex Hull Method (CHM) 
-Using concepts from computational geometry, these CHM implementations allow for the calculation of multi-dimensional production envelopes in large metabolic models. 
 
-# Exact Implementation
-This is a python implementation tested on Python 3.6.9 using `QSopt` (version 2.5.10) for exact linear optimization. 
+_________________________________________________________________
 
-### Notes 
-Values of the domain must be integers. If necessary, scale all values accordingly.
+## Background 
 
-### Dependencies
-The [python-qsoptex](https://github.com/jonls/python-qsoptex) module requires the [GMP](https://gmplib.org/) and [QSopt_ex](https://github.com/jonls/qsopt-ex) libraries to be installed.
+Using concepts from computational geometry, these CHM implementations allow for the calculation of multi-dimensional production envelopes in large metabolic models. To evluate the impact of numerical precision, this repository contains three different CHM implementations:
+- an exact arthimetic implementation in Python
+- a floating point, double precision arithmetic implementation in Python 
+- a floating point, double precision arithmetic implementation in MATLAB 
 
+The floating point arithmetic implementations find less extreme points overall, due to rounding, but scale easily to higher dimensions on genome-scale metabolic models (tested for up to 6 reactions on interest). To compare precision and run time, we use both implementations to calculate production envelopes of the genome-scale metabolic model of *E. coli* [iJO1366](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3261703/) and its core model [EColiCore2](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5206746/). To calculate multi-dimensional production envelopes of the syntropic exchange reactions of a microbial communities, we apply the floating point arithmetic implementation to a [biogas-producing community model](https://biotechnologyforbiofuels.biomedcentral.com/articles/10.1186/s13068-016-0429-x).
+
+Please see the Methods in our associated publication (currently in submission) for further details on the implementations. To use the above implementations, please follow the below outline installation requirements and example runs. 
+
+The double precision Python implementation contains an additional feature, compared to the MATLAB double precision implementation, which stores the stoichiometric constraints of the gurobi model such that there is no need to initialize the gurobi model from scratch each time that a linear program is computed. 
+
+_________________________________________________________________
+
+## Installation  
+
+__Exact Implementation in Python__
+*Python Requirements*
+```
+pip3 install -r req_exact.txt
+```
+
+*Notes*
+- Python implementation tested on Python 3.6.9 using `QSopt` (version 2.5.10) for exact linear optimization.
+- The [python-qsoptex](https://github.com/jonls/python-qsoptex) module requires the [GMP](https://gmplib.org/) and [QSopt_ex](https://github.com/jonls/qsopt-ex) libraries to be installed.
 - Debian:
     ```
     apt-get install libgmp3-dev
     apt-get install libqsopt-ex-dev
     ```
-### Python Requirements
-```
-pip3 install -r req_exact.txt
-```
 
-# Floating-point Arithmetic Implementation (Double-Precision) 
-
-Here we provide a Python and a MATLAB implementation. 
-
-The MATLAB implementation was tested on MATLAB R2020a using `gurobi` (version 9.0.2) for double-precision linear optimization.
-
-The Python implementation was tested on Python 3.7.6 using `gurobi` (version 9.0.2) for double-precision linear optimization. 
-
-The floating point arithmetic implementations find less extreme points overall, due to rounding, but scale easily to higher dimensions on genome-scale metabolic models (tested for up to 6 reactions on interest).
-
-Preliminary run-time differences between the MATLAB and the Python implementation suggest that the MATLAB implementation runs slightly faster, however, both floating-point arithmetic implementations outperform the run-time of the exact implementation by orders of magnitude. 
-
-The Python implementation contains an additional feature, compared to the MATLAB implementation, which stores the stoichiometric constraints of the gurobi model such that there is no need to initialize the gurobi model from scratch each time that a linear program is computed. 
-
-## Biological Examples
-
-To compare precision and run time, we use both implementations to calculate production envelopes of the genome-scale metabolic model of *E. coli* [iJO1366](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3261703/) and its core model [EColiCore2](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5206746/). 
-
-To calculate multi-dimensional production envelopes of the syntropic exchange reactions of a microbial communities, we apply the floating point arithmetic implementation to a [biogas-producing community model](https://biotechnologyforbiofuels.biomedcentral.com/articles/10.1186/s13068-016-0429-x).
-
-
-### Dependencies
-Install [Gurobi Optimizer](https://www.gurobi.com/downloads/gurobi-optimizer-eula/) version 9.0.2 for MATLAB and Python.
-
-### Python Requirements
+__Double Precision Implementation in Python__
+*Python Requirements*
 ```
 pip3 install -r req_double.txt
 ```
+
+*Notes*
+- The Python implementation was tested on Python 3.7.6 using `gurobi` (version 9.0.2) for double-precision linear optimization.
+- A `gurobi` license must be downloaded pior to running this implementation
+
+__Double Precision Implementation in MATLAB__
+
+The MATLAB implementation was tested on MATLAB R2020a using `gurobi` (version 9.0.2) for double-precision linear optimization. A `gurobi` license must be downloaded pior to running this implementation. No additional packages, other than the functions outlined in the `.m` files in the `DOUBLE/MATLAB/chm` folder are required. 
+
+_________________________________________________________________
+
+## Usage
+
+Please see below for individual use cases of the three different implementation. The following input files should be used to run any of the three implementations: 
+- domains.txt => contains two columns, the 1st with the lower bounds, the 2nd with the upper bounds
+- stoichs.txt => contains the stoichiometric matrix (reactions x metabolites) of the model
+- reactions.txt => (optional) contains the name annotations of the reactions as listed in the other two files
+
+Please not that input values for the exact implementation must be integers and that all values should be scaled accordingly. 
+
+__Exact Implementation in Python__
+
+In the `EXACT/Python/` directory create a main file that contains the following lines of code
+```
+import chm_exact
+reactions = [0, 1] # list of reactions for which to calculate the PE
+data_path = "../../DATA/YOUR_DATA_SET"
+chm_exact.compute_CH(data_path + "reactions.txt", data_path + "stoichs.txt", \
+    data_path + "tdomains.txt", reactions)
+```
+
+Please run the `EXACT/Python/main.m` file for an example.
+
+
+__Double Precision Implementation in Python__
+
+```
+from chm_double import CHM
+reactions = [0, 2, 71] 
+chm = CHM(reactions)
+data_path = "../../DATA/YOUR_DATA_SET"
+chm.set_stoichiometric_matrix(data_path + "stoichs.txt")
+chm.set_reaction_domains(data_path + "domains.txt")
+chm.set_model()
+init_points = chm.initial_points()
+hull = chm.initial_hull(init_points)
+(final_points, final_hyperplanes) = chm.incremental_refinement(hull, init_points)
+print("Final Extreme Points...")
+print(final_points)
+```
+
+Please run the `DOUBLE/Python/main.m` file for an example. 
+
+
+__Double Precision Implementation in MATLAB__
+
+In the `DOUBLE/MATLAB/chm/` directory create a main file that contains the following lines of code
+```
+data_path = "../../DATA/YOUR_DATA_SET";
+domain = load('domain.txt');
+reactions = [1,3]; % list of reactions for which to calculate the PE
+CH=computeCH(load(data_path + "stoichs.txt",), domain(:,1), domain(:,2), reactions);
+```
+
+Please run the `DOUBLE/MATLAB/EColi/main.m` file for an example. 
