@@ -20,7 +20,8 @@ _________________________________________________________________
 ## Installation  
 
 __Exact Implementation in Python__
-*Python Requirements*
+
+All Python requirements can be installed as follows:
 ```
 pip3 install -r req_exact.txt
 ```
@@ -35,7 +36,8 @@ pip3 install -r req_exact.txt
     ```
 
 __Double Precision Implementation in Python__
-*Python Requirements*
+
+All Python requirements can be installed as follows:
 ```
 pip3 install -r req_double.txt
 ```
@@ -53,9 +55,9 @@ _________________________________________________________________
 ## Usage
 
 Please see below for individual use cases of the three different implementation. The following input files should be used to run any of the three implementations: 
-- domains.txt => contains two columns, the 1st with the lower bounds, the 2nd with the upper bounds
-- stoichs.txt => contains the stoichiometric matrix (reactions x metabolites) of the model
-- reactions.txt => (optional) contains the name annotations of the reactions as listed in the other two files
+- `domains.txt`: contains two columns, the 1st with the lower bounds, the 2nd with the upper bounds
+- `stoichs.txt`: contains the stoichiometric matrix (reactions x metabolites) of the model
+- `reactions.txt`: (optional) contains the name annotations of the reactions as listed in the other two files
 
 Please not that input values for the exact implementation must be integers and that all values should be scaled accordingly. 
 
@@ -74,6 +76,8 @@ Please run the `EXACT/Python/main.m` file for an example.
 
 
 __Double Precision Implementation in Python__
+
+In the `DOUBLE/Python/` directory create a main file that contains the following lines of code
 
 ```
 from chm_double import CHM
