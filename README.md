@@ -4,7 +4,7 @@ _________________________________________________________________
 
 ## Background 
 
-Using concepts from computational geometry, these CHM implementations allow for the calculation of multi-dimensional production envelopes in large metabolic models. To evluate the impact of numerical precision, this repository contains three different CHM implementations:
+Using concepts from computational geometry, these CHM implementations allow for the calculation of multi-dimensional production envelopes in large metabolic models. To evaluate the impact of numerical precision, this repository contains three different CHM implementations:
 - an exact arthimetic implementation in Python
 - a floating point, double precision arithmetic implementation in Python 
 - a floating point, double precision arithmetic implementation in MATLAB 
@@ -27,8 +27,8 @@ pip3 install -r req_exact.txt
 ```
 
 *Notes*
-- Python implementation tested on Python 3.6.9 using `QSopt` (version 2.5.10) for exact linear optimization.
-- The [`python-qsoptex`](https://github.com/jonls/python-qsoptex) module requires the [`GMP`](https://gmplib.org/) and [`QSopt_ex`](https://github.com/jonls/qsopt-ex) libraries to be installed.
+- Python implementation tested on Python 3.6.9 using [`QSopt`](http://www.math.uwaterloo.ca/~bico/qsopt/) for exact linear optimization.
+- The [`python-qsoptex`](https://github.com/jonls/python-qsoptex) module requires the [`GMP`](https://gmplib.org/) and [`QSopt_ex`](https://github.com/jonls/qsopt-ex) (version 2.5.10) libraries to be installed.
 - Debian:
     ```
     apt-get install libgmp3-dev
@@ -61,15 +61,15 @@ _________________________________________________________________
 Please see below for individual use cases of the three different implementations. The following input files should be used to run any of the three implementations: 
 - `domains.txt`: contains two columns, the 1st with the lower bounds, the 2nd with the upper bounds
 - `stoichs.txt`: contains the stoichiometric matrix (reactions x metabolites) of the model
-- `reactions.txt`: (optional) contains the name annotations of the reactions as listed in the other two files
-
-Please note that **input values for the exact implementation must be integers** and that all values should be scaled accordingly. 
+- (optional) `reactions.txt`: contains the name annotations of the reactions as listed in the other two files
 
 
 __Exact Implementation in Python__
 
+Please note that **input values for the exact implementation must be integers** and that all values should be scaled accordingly. 
+
 Run the [`EXACT/Python/main.py`](EXACT/Python/main.py) file for an example or a variation of the following code:
-```python
+```Python
 import chm_exact
 reactions = [0, 1] # list of reactions for which to calculate the PE
 data_path = "YOUR_DATA_SET_FOLDER"
@@ -82,9 +82,9 @@ __Double Precision Implementation in Python__
 
 Run the [`DOUBLE/Python/main.py`](DOUBLE/Python/main.py) file for an example or a variation of the following code:
 
-```python
+```Python
 from chm_double import CHM
-reactions = [0, 2, 71] 
+reactions = [0, 2, 71] # list of reactions for which to calculate the PE
 chm = CHM(reactions)
 data_path = "YOUR_DATA_SET_FOLDER"
 chm.set_stoichiometric_matrix(data_path + "stoichs.txt")
