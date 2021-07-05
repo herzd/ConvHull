@@ -5,7 +5,7 @@
 *** existing code
 **** main program
 #+NAME: main.py
-#+BEGIN_SRC python :results output
+#+BEGIN_SRC python :results output :exports none
 import chm_exact
 reactions = [0, 1]
 data_path = "../../DATA/toy/"
@@ -22,7 +22,7 @@ chm_exact.compute_CH(data_path + "toy_reactions.txt", data_path + "toy_stoichs.t
 
 **** library
 #+NAME: chm_exact.py
-#+BEGIN_SRC python
+#+BEGIN_SRC python :exports none
 import sys
 import qsoptex
 from sympy import Matrix, sympify
