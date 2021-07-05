@@ -1,5 +1,5 @@
-* Exact implementation of the convex hull method in Python
-  In this file I document my work on the exact version of the convex hull method Python-implementation.  Changes on the initial files (~main.py~, and ~chm_exact.py~) will be produced from this file. These will be called ~main_v2.py~ and ~chm_exact_v2.py~.
+* convex hull algorithm in Python
+  In this file I document my work on the 'exact' (no-float) version of a convex hull algorithm implemented in the programming language Python 3. Changes on the initial files (~main.py~, and ~chm_exact.py~) will be produced from this file. These will be called ~main_v2.py~ and ~chm_exact_v2.py~. The main goal of this work is to find ways to speed up the calculation by means of parallelization where possible.
 
 ** survey
 *** existing code
