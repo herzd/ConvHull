@@ -3,7 +3,7 @@
 
 ** survey
 *** existing code
-**** main program
+**** main program (~main.py~)
 #+NAME: main.py
 #+BEGIN_SRC python :results output :exports none
 import chm_exact
@@ -20,7 +20,7 @@ chm_exact.compute_CH(data_path + "toy_reactions.txt", data_path + "toy_stoichs.t
 : 3	1
 : 1	-1
 
-**** library
+**** library (~chm_exact.py~)
 #+NAME: chm_exact.py
 #+BEGIN_SRC python :exports none
 import sys
@@ -334,7 +334,13 @@ def hp_in_CH(h, h0, v, chull):
 
 #+END_SRC
   
-*** work
+*** definitions
+    For a given set of X:
+    + convex hull :: 1. The (unique) minimal convex set containing set X.
+		     2. The intersection of all convex sets containing set X.
+		     3. The set of all convex combinations of points in set X.
+		     4. The union of all simplices with vertices in set X.
+    + 
 **** main program revisited
 #+NAME: main_v2.py
 #+BEGIN_SRC python :results output :tangle "./main_v2.py"
@@ -359,7 +365,41 @@ import sys
 import qsoptex
 from sympy import Matrix, sympify
 from fractions import Fraction
+# added for usefulness
+import numpy
 
+# additional functions for future implementation of the quickhull algorithm
+def get_max_x(POINTS):
+    '''takes a set of points represented as tuples and returns a tuple of the
+    point with maximal x-value. In case of multiple points, the first one
+    of an intermediate list is selected.'''
+    MAX_POINTS = []
+    X_MAX_VALUE = max([TUPLE[0] for TUPLE in POINTS])
+    [MAX_POINTS.append(TUPLE) for TUPLE in POINTS if TUPLE[0]==X_MAX_VALUE]
+    MAX_POINTS = MAX_POINTS[0]
+    MAX_POINT = tuple(MAX_POINTS)
+    return MAX_POINT
+
+def get_min_x(POINTS):
+    '''takes a set of points represented as tuples and returns a tuple of the
+    point with minimal x-value. In case of multiple points, the first one
+    of an intermediate list is selected.'''
+    MIN_POINTS = []
+    X_MIN_VALUE = min([TUPLE[0] for TUPLE in POINTS])
+    [MIN_POINTS.append(TUPLE) for TUPLE in POINTS if TUPLE[0]==X_MIN_VALUE]
+    MIN_POINTS = MIN_POINTS[0]
+    MIN_POINT = tuple(MIN_POINTS)
+    return MIN_POINT
+                   
+def remove_points_from_inspection(POINTS):
+    '''remove points with maximum and minimum x-values from list.'''
+    MAX_X_POINT = get_max_x(POINTS)
+    MIN_X_POINT = get_min_x(POINTS)
+    POINTS.remove(MAX_X_POINT)
+    POINTS.remove(MIN_X_POINT)
+    return POINTS
+    
+    
 
 # independent functions
 
