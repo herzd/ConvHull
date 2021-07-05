@@ -335,13 +335,9 @@ def hp_in_CH(h, h0, v, chull):
 #+END_SRC
   
 *** definitions
-    For a given set of X:
-    + convex hull :: 1. The (unique) minimal convex set containing set X.
-		     2. The intersection of all convex sets containing set X.
-		     3. The set of all convex combinations of points in set X.
-		     4. The union of all simplices with vertices in set X.
-    + 
-**** main program revisited
+    + convex set of points :: set of points in an Euclidean space, that contains the line segments connecting each pair of its points.
+    + convex hull :: For a given set X: the minimal convex set containing X/the intersection of all convex sets containing X/the set of all convex combinations of points in X/the union of all simplices with vertices in X
+**** main program v2
 #+NAME: main_v2.py
 #+BEGIN_SRC python :results output :tangle "./main_v2.py"
 import chm_exact
@@ -390,7 +386,9 @@ def get_min_x(POINTS):
     MIN_POINTS = MIN_POINTS[0]
     MIN_POINT = tuple(MIN_POINTS)
     return MIN_POINT
-                   
+
+    
+
 def remove_points_from_inspection(POINTS):
     '''remove points with maximum and minimum x-values from list.'''
     MAX_X_POINT = get_max_x(POINTS)
