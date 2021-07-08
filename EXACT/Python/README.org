@@ -337,16 +337,18 @@ def hp_in_CH(h, h0, v, chull):
 *** structural library analysis for speed tuning
 **** independent functions
 ***** dependencies
+      The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
       #+begin_src python :tangle "./chm_exact_v2.py"
 import sys
 import qsoptex
 from sympy import Matrix, sympify
 from fractions import Fraction
       #+end_src
-     The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
-***** solve_lp_exact
-      + inputs :: obj_inds, opt, h_add, h0_add
-      + outputs :: Matrix(lp.get_values())
+     
+***** TODO solve_lp_exact
+      + inputs (object-type) :: obj_inds (?), opt (?), h_add (?), h0_add (?)
+      + outputs(object-type) :: Matrix(lp.get_values()) (sympy matrix)
+      + depends (packages) :: sympy, qsoptex
       #+begin_src python :tangle "./chm_exact_v2.py"
 def solve_lp_exact(obj_inds, opt, h_add, h0_add):
     """
@@ -393,9 +395,10 @@ def solve_lp_exact(obj_inds, opt, h_add, h0_add):
         sys.exit("Solver status is not optimal. Status:" + str(status))
 
        #+end_src
-***** get_hyperplane
-      + inputs :: pts, dims
-      + outputs :: h, h0
+***** TODO get_hyperplane
+      + inputs (object-type) :: pts (?), dims (?)
+      + outputs (object-type) :: h(?), h0 (?)
+      + depends (packages) :: sympy
       #+begin_src python :tangle "./chm_exact_v2.py"
 def get_hyperplane(pts, dims):
     """
@@ -411,9 +414,10 @@ def get_hyperplane(pts, dims):
     h0 = hess[0][-1]
     return [h, h0]
       #+end_src
-***** create_lp
-      + inputs :: polyt, obj_inds
-      + outputs :: p
+***** TODO create_lp
+      + inputs (object-type) :: polyt (?), obj_inds (?)
+      + outputs (object-type) :: p (?)
+      + depends (packages) :: qsoptex, sympy
       #+begin_src python :tangle "./chm_exact_v2.py"
 def create_lp(polyt, obj_inds):
     """ Creates core LP problem with the Stoichiometric Matrix and list of constraints"""
@@ -435,9 +439,10 @@ def create_lp(polyt, obj_inds):
         p.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=int(beq[i]))
     return p
       #+end_src
-***** read_problem
-      + inputs :: reactions_path, s_matrix_path, domains_path
-      + outputs :: probl
+***** TODO read_problem
+      + inputs (object-type) :: reactions_path (?), s_matrix_path (?), domains_path (?)
+      + outputs (object-type) :: probl (?)
+      + depends (packages) :: sympy
       #+begin_src python :tangle "./chm_exact_v2.py"
 def read_problem(reactions_path, s_matrix_path, domains_path):
     """
@@ -478,9 +483,23 @@ def read_problem(reactions_path, s_matrix_path, domains_path):
     probl["beq"] = Matrix(beq)
     return probl
       #+end_src
-***** update_CH
-      + inputs :: new_p, epts, chull, dims
-      + outputs :: chull
+***** TODO hp_in_CH
+      + inputs (object-type) :: h (?), h0 (?), v (?), chull (?)
+      + outputs (object-type) :: flag (?)
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def hp_in_CH(h, h0, v, chull):
+    """this function checks if hyperplane and points are already in the CH"""
+    flag = 0
+    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
+        flag = 1
+    return flag
+      #+end_src
+**** interdependent functions
+     These functions partly depend on each other and/or the functions above.
+***** TODO update_CH
+      + inputs (object-type)  :: new_p (?), epts (?), chull (?), dims (?)
+      + outputs (object-type) :: chull (?)
+      + depends (return_object/return object type/self-depends) :: get_hyperplane(h,h0/??/sympy)
       #+begin_src python :tangle "./chm_exact_v2.py"
 def update_CH(new_p, epts, chull, dims):
     """
@@ -514,23 +533,11 @@ def update_CH(new_p, epts, chull, dims):
     chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return chull
       #+end_src
-***** hp_in_CH
-      + inputs :: h, h0, v, chull
-      + outputs :: flag
-      #+begin_src python :tangle "./chm_exact_v2.py"
-def hp_in_CH(h, h0, v, chull):
-    """this function checks if hyperplane and points are already in the CH"""
-    flag = 0
-    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
-        flag = 1
-    return flag
-      #+end_src
-**** interdependent functions
-     These functions partly depend on each other and/or the functions above.
-***** compute_CH
-      + inputs :: reactions_path, s_matrix_path, domains_path, impt_reactions
-      + outputs :: none (printing to stdout)
-      + depends :: read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
+
+***** TODO compute_CH
+      + inputs (object-type) :: reactions_path (?), s_matrix_path (?), domains_path (?), impt_reactions (?)
+      + outputs (object-type) :: none (printing to stdout)
+      + depends (return object/return object type/self-depends) :: read_problem (probl/?), create_lp (p/?), initial_points (eps/?/solve_lp_exact, extreme_point),initial_hull (hull/?/get_hyperplane), incremental_refinement (chull, eps/??/solve_lp_exact, extreme_points, update_CH)
       #+begin_src python :tangle "./chm_exact_v2.py" 
 def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
     """
@@ -559,10 +566,10 @@ def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # d
     for e in range(epts.shape[1]):
         print("\t".join([str(epts[d, e]) for d in impt_reactions]))
       #+end_src
-***** incremental_refinement
-      + inputs :: chull, eps, dims
-      + outputs :: chull, eps
-      + depends :: solve_lp_exact, extreme_points, update_CH
+***** TODO incremental_refinement
+      + inputs (object-type) :: chull (?), eps (?), dims (?)
+      + outputs (object-type) :: chull (?), eps (?)
+      + depends (return object/return object type/self-depends) :: solve_lp_exact (Matrix(lp.get_values())/sympy matrix/qsoptex,sympy), extreme_point (opt/?/solve_lp_exact), update_CH (chull/?/get_hyperplane)
       #+begin_src python :tangle "./chm_exact_v2.py"
 def incremental_refinement(chull, eps, dims): # depends on solve_lp_exact, extreme_point, update_CH
     """
@@ -593,10 +600,10 @@ def incremental_refinement(chull, eps, dims): # depends on solve_lp_exact, extre
         chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return [chull, eps]
       #+end_src
-***** initial_points
-      + inputs :: dims
-      + outputs :: eps
-      + depends :: solve_lp_exact, extreme_point
+***** TODO initial_points
+      + inputs (object-type) :: dims
+      + outputs (object-type) :: eps
+      + depends (return object/return object type/self-depends) :: solve_lp_exact (Matrix(lp.get_values())/sympy matrix/qsoptex,sympy), extreme_point (opt/?/solve_lp_exact)
       #+begin_src python :tangle "./chm_exact_v2.py"
 def initial_points(dims): # depends on solve_lp_exact and extreme_point
     """
@@ -634,10 +641,10 @@ def initial_points(dims): # depends on solve_lp_exact and extreme_point
                 eps = eps.col_insert(eps.shape[1], ep)
     return eps
       #+end_src
-***** extreme_point
-      + inputs :: h, h0, optim, dims
-      + outputs :: opt
-      + depends :: solve_lp_exact
+***** TODO extreme_point
+      + inputs (object-type) :: h (?) , h0 (?), optim (?), dims (?)
+      + outputs (object-type) :: opt (?)
+      + depends (return object/return object type/self-depends) :: solve_lp_exact (Matrix(lp.get_values())/sympy matrix/qsoptex,sympy)
       #+begin_src python :tangle "./chm_exact_v2.py"
 def extreme_point(h, h0, optim, dims): # depends on solve_lp_exact
     """
@@ -649,10 +656,10 @@ def extreme_point(h, h0, optim, dims): # depends on solve_lp_exact
     opt = solve_lp_exact(obj, optim, h, h0)
     return opt
       #+end_src
-***** initial_hull
-      + inputs :: pnts, dims
-      + outputs :: hull
-      + depends :: get_hyperplane
+***** TODO initial_hull
+      + inputs (object-type) :: pnts (?), dims (?)
+      + outputs (object-type) :: hull (?)
+      + depends (return object/return object type/self-depends) :: get_hyperplane (h,h0/??/sympy)
       #+begin_src python :tangle "./chm_exact_v2.py"
 def initial_hull(pnts, dims): # depends on get_hyperplane
     """
@@ -670,7 +677,22 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
     return hull
       #+end_src
 *** TODO dependency diagram
-    compute_CH -> read_problem -> lp_data -> create_lp -> initial_points -> initial_hull -> incremental_refinement
+| Functions              | sympy | qsoptex | solve_lp_exact | get_hyperplane | extreme_point | update_CH | create_lp | read_problem | incremental_refinement | initial_points | initial_hull | hp_in_CH | compute_CH |
+|------------------------+-------+---------+----------------+----------------+---------------+-----------+-----------+--------------+------------------------+----------------+--------------+----------+------------|
+| sympy                  | X     |         |                |                |               |           |           |              |                        |                |              |          |            |
+| qsoptex                |       | X       |                |                |               |           |           |              |                        |                |              |          |            |
+| solve_lp_exact         | X     | X       | X              |                |               |           |           |              |                        |                |              |          |            |
+| get_hyperplane         | X     |         |                | X              |               |           |           |              |                        |                |              |          |            |
+| create_lp              | X     | X       |                |                |               |           | X         |              |                        |                |              |          |            |
+| read_problem           | X     |         |                |                |               |           |           | X            |                        |                |              |          |            |
+| hp_in_CH               |       |         |                |                |               |           |           |              |                        |                |              | X        |            |
+| update_CH              | X     |         |                | X              |               | X         |           |              |                        |                |              |          |            |
+| compute_CH             | X     | X       | X              | X              | X             | X         | X         | X            | X                      | X              | X            |          | X          |
+| incremental_refinement | X     | X       | X              | X              | X             | X         |           |              | X                      |                |              |          |            |
+| initial_points         | X     | X       | X              |                | X             |           |           |              |                        | X              |              |          |            |
+| extreme_point          | X     | X       | X              |                | X             |           |           |              |                        |                |              |          |            |
+| initial_hull           | X     |         |                |                |               |           |           |              |                        |                | X            |          |            |
+
 *** TODO structural main program analysis for speed tuning
 #+NAME: main_v2.py
 #+BEGIN_SRC python :results output :tangle "./main_v2.py"
