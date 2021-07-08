@@ -670,6 +670,7 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
     return hull
       #+end_src
 *** TODO dependency diagram
+    compute_CH -> read_problem -> lp_data -> create_lp -> initial_points -> initial_hull -> incremental_refinement
 *** TODO structural main program analysis for speed tuning
 #+NAME: main_v2.py
 #+BEGIN_SRC python :results output :tangle "./main_v2.py"
