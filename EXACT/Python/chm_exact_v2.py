@@ -1,3 +1,8 @@
+import sys
+import qsoptex
+from sympy import Matrix, sympify
+from fractions import Fraction
+
 def solve_lp_exact(obj_inds, opt, h_add, h0_add):
     """
     Solves LP exactly
