@@ -334,6 +334,27 @@ def hp_in_CH(h, h0, v, chull):
 
 #+END_SRC
 ** workon
+*** TODO main program v2 for speed tuning
+#+NAME: main_v2.py
+#+BEGIN_SRC python :results output :tangle "./main_v2.py"
+"""
+Computes the convex hull for production envelopes of metabolic network. Solution is
+the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
+,* fname: name of file without extension (must be the same for all files
+  - fname_r.txt: list of reaction names - order must follow that of S columns
+  - fname_S.txt: Stoichiometric matrix
+  - fname_d.txt : lb ub for each reaction
+,* impt_reactions: list of indices for the dimensions onto which the CH should be computed
+"""
+
+import chm_exact
+REACTION_FILE = "/home/daniel/ConvHull/DATA/toy/toy_reactions.txt"
+STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
+DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
+REACTIONS = [0, 1]
+
+chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, REACTIONS)
+#+END_SRC
 *** structural library analysis for speed tuning
 **** independent functions
      The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
@@ -692,24 +713,3 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
 | extreme_point          | X     | X       | X              |                | X             |           |           |              |                        |                |              |          |            |
 | initial_hull           | X     |         |                |                |               |           |           |              |                        |                | X            |          |            |
 
-*** TODO structural main program analysis for speed tuning
-#+NAME: main_v2.py
-#+BEGIN_SRC python :results output :tangle "./main_v2.py"
-"""
-Computes the convex hull for production envelopes of metabolic network. Solution is
-the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
-,* fname: name of file without extension (must be the same for all files
-  - fname_r.txt: list of reaction names - order must follow that of S columns
-  - fname_S.txt: Stoichiometric matrix
-  - fname_d.txt : lb ub for each reaction
-,* impt_reactions: list of indices for the dimensions onto which the CH should be computed
-"""
-
-import chm_exact
-REACTION_FILE = "/home/daniel/ConvHull/DATA/toy/toy_reactions.txt"
-STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
-DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
-REACTIONS = [0, 1]
-
-chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, REACTIONS)
-#+END_SRC
