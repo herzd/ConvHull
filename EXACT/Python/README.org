@@ -373,163 +373,6 @@ INPUT_REACTIONS = [0, 1]
 chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, INPUT_REACTIONS)
 #+END_SRC
 *** TODO structural library analysis for speed tuning
-**** independent functions
-     The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
-***** dependencies
-      #+begin_src python :tangle "./chm_exact_v2.py"
-import sys
-import qsoptex
-from sympy import Matrix, sympify
-from fractions import Fraction
-      #+end_src
-     
-***** TODO solve_lp_exact
-      + inputs (object-type) :: obj_inds (?), opt (?), h_add (?), h0_add (?)
-      + outputs(object-type) :: Matrix(lp.get_values()) (sympy matrix)
-      + depends (packages) :: sympy, qsoptex
-      #+begin_src python :tangle "./chm_exact_v2.py"
-def solve_lp_exact(obj_inds, opt, h_add, h0_add):
-    """
-    Solves LP exactly
-    """
-    global RIDS
-    global lp_prob
-    flag_a = 0
-    lp = lp_prob
-    # change objective
-    new_obj = {}
-    # set integers when possible to speed up computation
-    for i in range(len(obj_inds)):
-        if sympify(obj_inds[i]).is_integer or obj_inds[i] == 0:
-            new_obj[RIDS[i]] = int(obj_inds[i])
-        elif sympify(obj_inds[i]).is_rational:
-            new_obj[RIDS[i]] = Fraction(str(obj_inds[i]))
-    lp.set_linear_objective(new_obj)
-    # additional constraints other than stoichiometric, if any
-    if h_add and h0_add:
-        flag_a = 1
-        constr = {}
-        for j in range(len(h_add)):
-            if h_add[j] != 0:
-                if sympify(h_add[j]).is_integer:
-                    constr[RIDS[j]] = int(h_add[j])
-                elif sympify(h_add[i]).is_rational:
-                    constr[RIDS[j]] = Fraction(str(h_add[j]))
-        lp.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=Fraction(str(h0_add[0])))
-    if opt == -1:
-        lp.set_objective_sense(qsoptex.ObjectiveSense.MAXIMIZE)
-    elif opt == 1:
-        lp.set_objective_sense(qsoptex.ObjectiveSense.MINIMIZE)
-    else:
-        sys.exit("opt takes 2 possible values: -1 or 1")
-    lp.set_param(qsoptex.Parameter.SIMPLEX_DISPLAY, 1)
-    status = lp.solve()
-    # remove last constraint (if added) from the basis LP
-    if flag_a:
-        lp.delete_linear_constraint(lp.get_constraint_count() - 1)
-    if status == qsoptex.SolutionStatus.OPTIMAL:
-        return Matrix(lp.get_values())
-    else:
-        sys.exit("Solver status is not optimal. Status:" + str(status))
-
-       #+end_src
-***** TODO get_hyperplane
-      + inputs (object-type) :: pts (?), dims (?)
-      + outputs (object-type) :: h(?), h0 (?)
-      + depends (packages) :: sympy
-      #+begin_src python :tangle "./chm_exact_v2.py"
-def get_hyperplane(pts, dims):
-    """
-    Compute the Hessian Normal form of a set of points
-    """
-    h = Matrix.zeros(1, pts.shape[0])
-    dis = -Matrix.ones(pts.shape[1], 1)
-    pnts_dims = pts[dims, :].T
-    C = pnts_dims.col_insert(pnts_dims.shape[1], dis)
-    hess = C.nullspace()
-    for i in range(len(dims)):
-        h[dims[i]] = hess[0][i]
-    h0 = hess[0][-1]
-    return [h, h0]
-      #+end_src
-***** TODO create_lp
-      + inputs (object-type) :: polyt (?), obj_inds (?)
-      + outputs (object-type) :: p (?)
-      + depends (packages) :: qsoptex, sympy
-      #+begin_src python :tangle "./chm_exact_v2.py"
-def create_lp(polyt, obj_inds):
-    """ Creates core LP problem with the Stoichiometric Matrix and list of constraints"""
-    # create problem
-    p = qsoptex.ExactProblem()
-    [Aeq, beq, rids, domain] = [polyt["Aeq"], polyt["beq"], polyt["rids"], polyt["domain"]]
-    [lbs, ubs] = domain
-    # add variables to lp
-    for i in range(len(rids)):
-        p.add_variable(name=rids[i], objective=Fraction(str(obj_inds[i])), lower=lbs[i], upper=ubs[i])
-    # constraints
-    # for each row in S (metabolite) = for each constraint
-    for i in range(Aeq.shape[0]):
-        constr = {}
-        # for each column in S = for each reaction
-        for j in range(Aeq.shape[1]):
-            if Aeq[i, j] != 0:
-                constr[rids[j]] = int(Aeq[i, j])
-        p.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=int(beq[i]))
-    return p
-      #+end_src
-***** TODO read_problem
-      + inputs (object-type) :: reactions_path (?), s_matrix_path (?), domains_path (?)
-      + outputs (object-type) :: probl (?)
-      + depends (packages) :: sympy
-      #+begin_src python :tangle "./chm_exact_v2.py"
-def read_problem(reactions_path, s_matrix_path, domains_path):
-    """
-    Read LP problem from 3 files: reactions, Stoichiometric matrix, and constraints
-    """
-    probl = {}
-    # read reaction names
-    reac_names = []
-    with open(reactions_path, "r") as filetoberead:
-        for line in filetoberead.readlines():
-            line = line.strip()
-            reac_names.append(line)
-    probl["rids"] = reac_names
-    # read upper and lower bounds of reactions (domain)
-    lbs = []
-    ubs = []
-    with open(domains_path, "r") as filetoberead:
-        for line in filetoberead.readlines():
-            line = line.strip()
-            line = line.split()
-            # var info is defined nowhere else in the program -- what is it?
-            lbs.append(int(info[0]))
-            ubs.append(int(info[1]))
-    probl["domain"] = [lbs, ubs]
-    # read stoichiometric matrix. Rows=metabolites, columns=reactions
-    S = []
-    with open(s_matrix_path, "r") as filetoberead:
-        for line in filetoberead.readlines():
-            line = line.strip()
-            row = []
-            for column in line.split():
-                row.append(int(column))
-            S.append(row)
-    beq = [0] * len(S)
-    probl["Aeq"] = Matrix(S)
-    probl["beq"] = Matrix(beq)
-    return probl
-      #+end_src
-***** TODO hp_in_CH
-      + inputs (object-type) :: h (?), h0 (?), v (?), chull (?)
-      + outputs (object-type) :: flag (?)
-      #+begin_src python :tangle "./chm_exact_v2.py"
-def hp_in_CH(h, h0, v, chull):
-    """this function checks if hyperplane and points are already in the CH"""
-    flag = 0
-    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
-        flag = 1
-    return flag
-      #+end_src
 **** interdependent functions
      These functions partly depend on each other and/or the functions above.
 ***** TODO update_CH
@@ -712,4 +555,161 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
         else:
             hull.append([[h, h0], v, 1])
     return hull
+      #+end_src
+**** independent functions
+     The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
+***** dependencies
+      #+begin_src python :tangle "./chm_exact_v2.py"
+import sys
+import qsoptex
+from sympy import Matrix, sympify
+from fractions import Fraction
+      #+end_src
+     
+***** TODO solve_lp_exact
+      + inputs (object-type) :: obj_inds (?), opt (?), h_add (?), h0_add (?)
+      + outputs(object-type) :: Matrix(lp.get_values()) (sympy matrix)
+      + depends (packages) :: sympy, qsoptex
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def solve_lp_exact(obj_inds, opt, h_add, h0_add):
+    """
+    Solves LP exactly
+    """
+    global RIDS
+    global lp_prob
+    flag_a = 0
+    lp = lp_prob
+    # change objective
+    new_obj = {}
+    # set integers when possible to speed up computation
+    for i in range(len(obj_inds)):
+        if sympify(obj_inds[i]).is_integer or obj_inds[i] == 0:
+            new_obj[RIDS[i]] = int(obj_inds[i])
+        elif sympify(obj_inds[i]).is_rational:
+            new_obj[RIDS[i]] = Fraction(str(obj_inds[i]))
+    lp.set_linear_objective(new_obj)
+    # additional constraints other than stoichiometric, if any
+    if h_add and h0_add:
+        flag_a = 1
+        constr = {}
+        for j in range(len(h_add)):
+            if h_add[j] != 0:
+                if sympify(h_add[j]).is_integer:
+                    constr[RIDS[j]] = int(h_add[j])
+                elif sympify(h_add[i]).is_rational:
+                    constr[RIDS[j]] = Fraction(str(h_add[j]))
+        lp.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=Fraction(str(h0_add[0])))
+    if opt == -1:
+        lp.set_objective_sense(qsoptex.ObjectiveSense.MAXIMIZE)
+    elif opt == 1:
+        lp.set_objective_sense(qsoptex.ObjectiveSense.MINIMIZE)
+    else:
+        sys.exit("opt takes 2 possible values: -1 or 1")
+    lp.set_param(qsoptex.Parameter.SIMPLEX_DISPLAY, 1)
+    status = lp.solve()
+    # remove last constraint (if added) from the basis LP
+    if flag_a:
+        lp.delete_linear_constraint(lp.get_constraint_count() - 1)
+    if status == qsoptex.SolutionStatus.OPTIMAL:
+        return Matrix(lp.get_values())
+    else:
+        sys.exit("Solver status is not optimal. Status:" + str(status))
+
+       #+end_src
+***** TODO get_hyperplane
+      + inputs (object-type) :: pts (?), dims (?)
+      + outputs (object-type) :: h(?), h0 (?)
+      + depends (packages) :: sympy
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def get_hyperplane(pts, dims):
+    """
+    Compute the Hessian Normal form of a set of points
+    """
+    h = Matrix.zeros(1, pts.shape[0])
+    dis = -Matrix.ones(pts.shape[1], 1)
+    pnts_dims = pts[dims, :].T
+    C = pnts_dims.col_insert(pnts_dims.shape[1], dis)
+    hess = C.nullspace()
+    for i in range(len(dims)):
+        h[dims[i]] = hess[0][i]
+    h0 = hess[0][-1]
+    return [h, h0]
+      #+end_src
+***** TODO create_lp
+      + inputs (object-type) :: polyt (?), obj_inds (?)
+      + outputs (object-type) :: p (?)
+      + depends (packages) :: qsoptex, sympy
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def create_lp(polyt, obj_inds):
+    """ Creates core LP problem with the Stoichiometric Matrix and list of constraints"""
+    # create problem
+    p = qsoptex.ExactProblem()
+    [Aeq, beq, rids, domain] = [polyt["Aeq"], polyt["beq"], polyt["rids"], polyt["domain"]]
+    [lbs, ubs] = domain
+    # add variables to lp
+    for i in range(len(rids)):
+        p.add_variable(name=rids[i], objective=Fraction(str(obj_inds[i])), lower=lbs[i], upper=ubs[i])
+    # constraints
+    # for each row in S (metabolite) = for each constraint
+    for i in range(Aeq.shape[0]):
+        constr = {}
+        # for each column in S = for each reaction
+        for j in range(Aeq.shape[1]):
+            if Aeq[i, j] != 0:
+                constr[rids[j]] = int(Aeq[i, j])
+        p.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=int(beq[i]))
+    return p
+      #+end_src
+***** TODO read_problem
+      + inputs (object-type) :: reactions_path (?), s_matrix_path (?), domains_path (?)
+      + outputs (object-type) :: probl (?)
+      + depends (packages) :: sympy
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def read_problem(reactions_path, s_matrix_path, domains_path):
+    """
+    Read LP problem from 3 files: reactions, Stoichiometric matrix, and constraints
+    """
+    probl = {}
+    # read reaction names
+    reac_names = []
+    with open(reactions_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            reac_names.append(line)
+    probl["rids"] = reac_names
+    # read upper and lower bounds of reactions (domain)
+    lbs = []
+    ubs = []
+    with open(domains_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            line = line.split()
+            # var info is defined nowhere else in the program -- what is it?
+            lbs.append(int(info[0]))
+            ubs.append(int(info[1]))
+    probl["domain"] = [lbs, ubs]
+    # read stoichiometric matrix. Rows=metabolites, columns=reactions
+    S = []
+    with open(s_matrix_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            row = []
+            for column in line.split():
+                row.append(int(column))
+            S.append(row)
+    beq = [0] * len(S)
+    probl["Aeq"] = Matrix(S)
+    probl["beq"] = Matrix(beq)
+    return probl
+      #+end_src
+***** TODO hp_in_CH
+      + inputs (object-type) :: h (?), h0 (?), v (?), chull (?)
+      + outputs (object-type) :: flag (?)
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def hp_in_CH(h, h0, v, chull):
+    """this function checks if hyperplane and points are already in the CH"""
+    flag = 0
+    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
+        flag = 1
+    return flag
       #+end_src
