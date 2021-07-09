@@ -88,37 +88,42 @@ def read_problem(reactions_path, s_matrix_path, domains_path):
     probl = {}
     # read reaction names
     reac_names = []
-    infile = open(reactions_path, "r") # fname + "_r.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        reac_names.append(line)
-    infile.close()
+    with open(reactions_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            reac_names.append(line)
     probl["rids"] = reac_names
     # read upper and lower bounds of reactions (domain)
     lbs = []
     ubs = []
-    infile = open(domains_path, "r") # fname + "_d.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        info = line.split()
-        lbs.append(int(info[0]))
-        ubs.append(int(info[1]))
-    infile.close()
+    with open(domains_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            line = line.split()
+            # var info is defined nowhere else in the program -- what is it?
+            lbs.append(int(info[0]))
+            ubs.append(int(info[1]))
     probl["domain"] = [lbs, ubs]
     # read stoichiometric matrix. Rows=metabolites, columns=reactions
     S = []
-    infile = open(s_matrix_path, "r") # fname + "_S.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        row = []
-        for col in line.split():
-            row.append(int(col))
-        S.append(row)
-    infile.close()
+    with open(s_matrix_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            row = []
+            for column in line.split():
+                row.append(int(column))
+            S.append(row)
     beq = [0] * len(S)
     probl["Aeq"] = Matrix(S)
     probl["beq"] = Matrix(beq)
     return probl
+
+def hp_in_CH(h, h0, v, chull):
+    """this function checks if hyperplane and points are already in the CH"""
+    flag = 0
+    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
+        flag = 1
+    return flag
 
 def update_CH(new_p, epts, chull, dims):
     """
@@ -151,13 +156,6 @@ def update_CH(new_p, epts, chull, dims):
             to_remove.append(i)
     chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return chull
-
-def hp_in_CH(h, h0, v, chull):
-    """this function checks if hyperplane and points are already in the CH"""
-    flag = 0
-    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
-        flag = 1
-    return flag
 
 def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
     """
@@ -220,6 +218,7 @@ def initial_points(dims): # depends on solve_lp_exact and extreme_point
     Computes Initial set of Extreme Points
     """
     global RIDS
+    
     num_vars = len(RIDS)
     h = [0] * num_vars
     h[dims[0]] = 1

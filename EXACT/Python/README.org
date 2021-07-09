@@ -336,8 +336,8 @@ def hp_in_CH(h, h0, v, chull):
 ** workon
 *** structural library analysis for speed tuning
 **** independent functions
+     The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
 ***** dependencies
-      The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
       #+begin_src python :tangle "./chm_exact_v2.py"
 import sys
 import qsoptex
@@ -451,33 +451,31 @@ def read_problem(reactions_path, s_matrix_path, domains_path):
     probl = {}
     # read reaction names
     reac_names = []
-    infile = open(reactions_path, "r") # fname + "_r.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        reac_names.append(line)
-    infile.close()
+    with open(reactions_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            reac_names.append(line)
     probl["rids"] = reac_names
     # read upper and lower bounds of reactions (domain)
     lbs = []
     ubs = []
-    infile = open(domains_path, "r") # fname + "_d.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        info = line.split()
-        lbs.append(int(info[0]))
-        ubs.append(int(info[1]))
-    infile.close()
+    with open(domains_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            line = line.split()
+            # var info is defined nowhere else in the program -- what is it?
+            lbs.append(int(info[0]))
+            ubs.append(int(info[1]))
     probl["domain"] = [lbs, ubs]
     # read stoichiometric matrix. Rows=metabolites, columns=reactions
     S = []
-    infile = open(s_matrix_path, "r") # fname + "_S.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        row = []
-        for col in line.split():
-            row.append(int(col))
-        S.append(row)
-    infile.close()
+    with open(s_matrix_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            row = []
+            for column in line.split():
+                row.append(int(column))
+            S.append(row)
     beq = [0] * len(S)
     probl["Aeq"] = Matrix(S)
     probl["beq"] = Matrix(beq)
@@ -610,6 +608,7 @@ def initial_points(dims): # depends on solve_lp_exact and extreme_point
     Computes Initial set of Extreme Points
     """
     global RIDS
+    
     num_vars = len(RIDS)
     h = [0] * num_vars
     h[dims[0]] = 1
@@ -696,8 +695,21 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
 *** TODO structural main program analysis for speed tuning
 #+NAME: main_v2.py
 #+BEGIN_SRC python :results output :tangle "./main_v2.py"
+"""
+Computes the convex hull for production envelopes of metabolic network. Solution is
+the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
+,* fname: name of file without extension (must be the same for all files
+  - fname_r.txt: list of reaction names - order must follow that of S columns
+  - fname_S.txt: Stoichiometric matrix
+  - fname_d.txt : lb ub for each reaction
+,* impt_reactions: list of indices for the dimensions onto which the CH should be computed
+"""
+
 import chm_exact
-reactions = [0, 1]
-data_path = "../../DATA/toy/"
-chm_exact.compute_CH(data_path + "toy_reactions.txt", data_path + "toy_stoichs.txt", data_path + "toy_domains.txt", reactions)
+REACTION_FILE = "/home/daniel/ConvHull/DATA/toy/toy_reactions.txt"
+STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
+DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
+REACTIONS = [0, 1]
+
+chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, REACTIONS)
 #+END_SRC
