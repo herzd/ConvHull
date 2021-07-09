@@ -334,28 +334,45 @@ def hp_in_CH(h, h0, v, chull):
 
 #+END_SRC
 ** workon
-*** TODO main program v2 for speed tuning
+*** TODO main program v2
+    Adapted v1 to pylint's suggestions.
 #+NAME: main_v2.py
 #+BEGIN_SRC python :results output :tangle "./main_v2.py"
 """
 Computes the convex hull for production envelopes of metabolic network. Solution is
 the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
-,* fname: name of file without extension (must be the same for all files
-  - fname_r.txt: list of reaction names - order must follow that of S columns
-  - fname_S.txt: Stoichiometric matrix
-  - fname_d.txt : lb ub for each reaction
-,* impt_reactions: list of indices for the dimensions onto which the CH should be computed
+  - REACTION_FILE : absolute path to file containing one reaction name string in each line, the names must be aligned with the columns of the Stoichiometric matrix.
+  - STOICHIOMETRIC_FILE : absolute path to file containing Stoichiometric matrix
+  - DOMAIN_FILE : absolute path to file containing lower and upper bounds for each reaction, one pair in a line
+  - INPUT_REACTIONS: list of indices for the dimensions onto which the CH should be computed
 """
 
 import chm_exact
 REACTION_FILE = "/home/daniel/ConvHull/DATA/toy/toy_reactions.txt"
 STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
 DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
-REACTIONS = [0, 1]
+INPUT_REACTIONS = [0, 1]
 
-chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, REACTIONS)
+chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, INPUT_REACTIONS)
 #+END_SRC
-*** structural library analysis for speed tuning
+*** TODO library dependency diagram
+| Functions              | sympy | qsoptex | solve_lp_exact | get_hyperplane | extreme_point | update_CH | create_lp | read_problem | incremental_refinement | initial_points | initial_hull | hp_in_CH | compute_CH |
+|------------------------+-------+---------+----------------+----------------+---------------+-----------+-----------+--------------+------------------------+----------------+--------------+----------+------------|
+| sympy                  | X     |         |                |                |               |           |           |              |                        |                |              |          |            |
+| qsoptex                |       | X       |                |                |               |           |           |              |                        |                |              |          |            |
+| solve_lp_exact         | X     | X       | X              |                |               |           |           |              |                        |                |              |          |            |
+| get_hyperplane         | X     |         |                | X              |               |           |           |              |                        |                |              |          |            |
+| create_lp              | X     | X       |                |                |               |           | X         |              |                        |                |              |          |            |
+| read_problem           | X     |         |                |                |               |           |           | X            |                        |                |              |          |            |
+| hp_in_CH               |       |         |                |                |               |           |           |              |                        |                |              | X        |            |
+| update_CH              | X     |         |                | X              |               | X         |           |              |                        |                |              |          |            |
+| compute_CH             | X     | X       | X              | X              | X             | X         | X         | X            | X                      | X              | X            |          | X          |
+| incremental_refinement | X     | X       | X              | X              | X             | X         |           |              | X                      |                |              |          |            |
+| initial_points         | X     | X       | X              |                | X             |           |           |              |                        | X              |              |          |            |
+| extreme_point          | X     | X       | X              |                | X             |           |           |              |                        |                |              |          |            |
+| initial_hull           | X     |         |                |                |               |           |           |              |                        |                | X            |          |            |
+
+*** TODO structural library analysis for speed tuning
 **** independent functions
      The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
 ***** dependencies
@@ -696,20 +713,3 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
             hull.append([[h, h0], v, 1])
     return hull
       #+end_src
-*** TODO dependency diagram
-| Functions              | sympy | qsoptex | solve_lp_exact | get_hyperplane | extreme_point | update_CH | create_lp | read_problem | incremental_refinement | initial_points | initial_hull | hp_in_CH | compute_CH |
-|------------------------+-------+---------+----------------+----------------+---------------+-----------+-----------+--------------+------------------------+----------------+--------------+----------+------------|
-| sympy                  | X     |         |                |                |               |           |           |              |                        |                |              |          |            |
-| qsoptex                |       | X       |                |                |               |           |           |              |                        |                |              |          |            |
-| solve_lp_exact         | X     | X       | X              |                |               |           |           |              |                        |                |              |          |            |
-| get_hyperplane         | X     |         |                | X              |               |           |           |              |                        |                |              |          |            |
-| create_lp              | X     | X       |                |                |               |           | X         |              |                        |                |              |          |            |
-| read_problem           | X     |         |                |                |               |           |           | X            |                        |                |              |          |            |
-| hp_in_CH               |       |         |                |                |               |           |           |              |                        |                |              | X        |            |
-| update_CH              | X     |         |                | X              |               | X         |           |              |                        |                |              |          |            |
-| compute_CH             | X     | X       | X              | X              | X             | X         | X         | X            | X                      | X              | X            |          | X          |
-| incremental_refinement | X     | X       | X              | X              | X             | X         |           |              | X                      |                |              |          |            |
-| initial_points         | X     | X       | X              |                | X             |           |           |              |                        | X              |              |          |            |
-| extreme_point          | X     | X       | X              |                | X             |           |           |              |                        |                |              |          |            |
-| initial_hull           | X     |         |                |                |               |           |           |              |                        |                | X            |          |            |
-
