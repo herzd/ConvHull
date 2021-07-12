@@ -13,4 +13,7 @@ STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
 DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
 INPUT_REACTIONS = [0, 1]
 
-chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, INPUT_REACTIONS)
+CHULL, EPTS = chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, INPUT_REACTIONS)
+REFINED_CHULL, REFINED_EPTS = chm_exact.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS)
+print(REFINED_CHULL)
+print(REFINED_EPTS)

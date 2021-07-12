@@ -98,9 +98,8 @@ def read_problem(reactions_path, s_matrix_path, domains_path):
     ubs = []
     with open(domains_path, "r") as filetoberead:
         for line in filetoberead.readlines():
-            line = line.strip()
-            line = line.split()
-            # var info is defined nowhere else in the program -- what is it?
+            info = line.strip()
+            info = line.split()
             lbs.append(int(info[0]))
             ubs.append(int(info[1]))
     probl["domain"] = [lbs, ubs]
@@ -167,22 +166,16 @@ def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # d
       - fname_d.txt : lb ub for each reaction
     * impt_reactions: list of indices for the dimensions onto which the CH should be computed
     """
-    global RIDS
-    global lp_prob
     lp_data = read_problem(reactions_path, s_matrix_path, domains_path)
     obj = [0] * lp_data["Aeq"].shape[1]
+    # what does this do - fulfil syntax for qsoptex?
     obj[impt_reactions[0]] = 1
     lp_prob = create_lp(lp_data, obj)
-    RIDS = lp_data["rids"]
     # INITIAL POINTS
     epts = initial_points(impt_reactions)
     # INITIAL HULL
     chull = initial_hull(epts, impt_reactions)
-    # INCREMENTAL REFINEMENT
-    [chull, epts] = incremental_refinement(chull, epts, impt_reactions)
-    print("\t".join([RIDS[d] for d in impt_reactions]))
-    for e in range(epts.shape[1]):
-        print("\t".join([str(epts[d, e]) for d in impt_reactions]))
+    return chull,epts
 
 def incremental_refinement(chull, eps, dims): # depends on solve_lp_exact, extreme_point, update_CH
     """
