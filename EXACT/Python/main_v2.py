@@ -1,4 +1,19 @@
+"""
+Computes the convex hull for production envelopes of metabolic network. Solution is
+the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
+  - REACTION_FILE : absolute path to file containing one reaction name string in each line, the names must be aligned with the columns of the Stoichiometric matrix.
+  - STOICHIOMETRIC_FILE : absolute path to file containing Stoichiometric matrix
+  - DOMAIN_FILE : absolute path to file containing lower and upper bounds for each reaction, one pair in a line
+  - INPUT_REACTIONS: list of indices for the dimensions onto which the CH should be computed
+"""
+
 import chm_exact
-reactions = [0, 1]
-data_path = "../../DATA/toy/"
-chm_exact.compute_CH(data_path + "toy_reactions.txt", data_path + "toy_stoichs.txt", data_path + "toy_domains.txt", reactions)
+REACTION_FILE = "/home/daniel/ConvHull/DATA/toy/toy_reactions.txt"
+STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
+DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
+INPUT_REACTIONS = [0, 1]
+
+CHULL, EPTS = chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, INPUT_REACTIONS)
+REFINED_CHULL, REFINED_EPTS = chm_exact.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS)
+print(REFINED_CHULL)
+print(REFINED_EPTS)

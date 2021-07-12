@@ -88,37 +88,41 @@ def read_problem(reactions_path, s_matrix_path, domains_path):
     probl = {}
     # read reaction names
     reac_names = []
-    infile = open(reactions_path, "r") # fname + "_r.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        reac_names.append(line)
-    infile.close()
+    with open(reactions_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            reac_names.append(line)
     probl["rids"] = reac_names
     # read upper and lower bounds of reactions (domain)
     lbs = []
     ubs = []
-    infile = open(domains_path, "r") # fname + "_d.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        info = line.split()
-        lbs.append(int(info[0]))
-        ubs.append(int(info[1]))
-    infile.close()
+    with open(domains_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            info = line.strip()
+            info = line.split()
+            lbs.append(int(info[0]))
+            ubs.append(int(info[1]))
     probl["domain"] = [lbs, ubs]
     # read stoichiometric matrix. Rows=metabolites, columns=reactions
     S = []
-    infile = open(s_matrix_path, "r") # fname + "_S.txt"
-    for line in infile.readlines():
-        line = line.strip()
-        row = []
-        for col in line.split():
-            row.append(int(col))
-        S.append(row)
-    infile.close()
+    with open(s_matrix_path, "r") as filetoberead:
+        for line in filetoberead.readlines():
+            line = line.strip()
+            row = []
+            for column in line.split():
+                row.append(int(column))
+            S.append(row)
     beq = [0] * len(S)
     probl["Aeq"] = Matrix(S)
     probl["beq"] = Matrix(beq)
     return probl
+
+def hp_in_CH(h, h0, v, chull):
+    """this function checks if hyperplane and points are already in the CH"""
+    flag = 0
+    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
+        flag = 1
+    return flag
 
 def update_CH(new_p, epts, chull, dims):
     """
@@ -152,13 +156,6 @@ def update_CH(new_p, epts, chull, dims):
     chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return chull
 
-def hp_in_CH(h, h0, v, chull):
-    """this function checks if hyperplane and points are already in the CH"""
-    flag = 0
-    if any([[[h, h0], v] == chull[i][:-1] for i in range(len(chull))]):
-        flag = 1
-    return flag
-
 def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
     """
     Computes the convex hull for production envelopes of metabolic network. Solution is 
@@ -169,22 +166,16 @@ def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # d
       - fname_d.txt : lb ub for each reaction
     * impt_reactions: list of indices for the dimensions onto which the CH should be computed
     """
-    global RIDS
-    global lp_prob
     lp_data = read_problem(reactions_path, s_matrix_path, domains_path)
     obj = [0] * lp_data["Aeq"].shape[1]
+    # what does this do - fulfil syntax for qsoptex?
     obj[impt_reactions[0]] = 1
     lp_prob = create_lp(lp_data, obj)
-    RIDS = lp_data["rids"]
     # INITIAL POINTS
     epts = initial_points(impt_reactions)
     # INITIAL HULL
     chull = initial_hull(epts, impt_reactions)
-    # INCREMENTAL REFINEMENT
-    [chull, epts] = incremental_refinement(chull, epts, impt_reactions)
-    print("\t".join([RIDS[d] for d in impt_reactions]))
-    for e in range(epts.shape[1]):
-        print("\t".join([str(epts[d, e]) for d in impt_reactions]))
+    return chull,epts
 
 def incremental_refinement(chull, eps, dims): # depends on solve_lp_exact, extreme_point, update_CH
     """
@@ -220,6 +211,7 @@ def initial_points(dims): # depends on solve_lp_exact and extreme_point
     Computes Initial set of Extreme Points
     """
     global RIDS
+    
     num_vars = len(RIDS)
     h = [0] * num_vars
     h[dims[0]] = 1
