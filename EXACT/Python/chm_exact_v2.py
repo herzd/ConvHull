@@ -156,7 +156,7 @@ def update_CH(new_p, epts, chull, dims):
     chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return chull
 
-def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
+def compute_CH(lp_data, impt_reactions, RIDS): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
     """
     Computes the convex hull for production envelopes of metabolic network. Solution is 
     the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
@@ -166,16 +166,11 @@ def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # d
       - fname_d.txt : lb ub for each reaction
     * impt_reactions: list of indices for the dimensions onto which the CH should be computed
     """
-    lp_data = read_problem(reactions_path, s_matrix_path, domains_path)
-    obj = [0] * lp_data["Aeq"].shape[1]
-    # what does this do - fulfil syntax for qsoptex?
-    obj[impt_reactions[0]] = 1
-    lp_prob = create_lp(lp_data, obj)
     # INITIAL POINTS
-    epts = initial_points(impt_reactions)
+    epts = initial_points(impt_reactions, RIDS)
     # INITIAL HULL
     chull = initial_hull(epts, impt_reactions)
-    return chull,epts
+    return [chull,epts]
 
 def incremental_refinement(chull, eps, dims): # depends on solve_lp_exact, extreme_point, update_CH
     """
@@ -206,11 +201,10 @@ def incremental_refinement(chull, eps, dims): # depends on solve_lp_exact, extre
         chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return [chull, eps]
 
-def initial_points(dims): # depends on solve_lp_exact and extreme_point
+def initial_points(dims,RIDS): # depends on solve_lp_exact and extreme_point
     """
     Computes Initial set of Extreme Points
     """
-    global RIDS
     
     num_vars = len(RIDS)
     h = [0] * num_vars

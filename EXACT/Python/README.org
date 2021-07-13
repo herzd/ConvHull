@@ -364,16 +364,32 @@ the list of hyperplanes and set of extreme points of the Convex hull. Inputs are
   - INPUT_REACTIONS: list of indices for the dimensions onto which the CH should be computed
 """
 
-import chm_exact
-REACTION_FILE = "/home/daniel/ConvHull/DATA/toy/toy_reactions.txt"
-STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
-DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
+import chm_exact_v2
+from chm_exact_v2 import read_problem, create_lp
+# given information
+REACTION_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_reactions.txt"
+STOICHIOMETRIC_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_stoichs.txt"
+DOMAIN_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_domains.txt"
 INPUT_REACTIONS = [0, 1]
 
-CHULL, EPTS = chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, INPUT_REACTIONS)
-REFINED_CHULL, REFINED_EPTS = chm_exact.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS)
-print(REFINED_CHULL)
-print(REFINED_EPTS)
+# create dictionary from the above files for further processing
+PROBLEM_READ = chm_exact_v2.read_problem(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE)
+# create some information for qsopt_ex (this makes a list of 3 zeros)
+OBJ = [0] * PROBLEM_READ["Aeq"].shape[1]
+# this sets the first zero to 1
+OBJ[INPUT_REACTIONS[0]] = 1
+# create linear problem from the dictionary to get rid off global statements within functions
+PROBLEM_CREATED = chm_exact_v2.create_lp(PROBLEM_READ,OBJ)
+# extract reaction ids, to get rid off the global statements within functions
+REACTION_IDS = PROBLEM_READ["rids"]
+CHULL, EPTS = chm_exact_v2.compute_CH(PROBLEM_READ, INPUT_REACTIONS, REACTION_IDS, PROBLEM_CREATED)
+
+
+# print(CHULL)
+# print(EPTS)
+# REFINED_CHULL, REFINED_EPTS = chm_exact.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS)
+# print(REFINED_CHULL)
+# print(REFINED_EPTS)
 
 #+END_SRC
 *** TODO structural library analysis for speed tuning
@@ -392,7 +408,7 @@ from fractions import Fraction
       + outputs(object-type) :: Matrix(lp.get_values()) (sympy matrix)
       + depends (packages) :: sympy, qsoptex
       #+begin_src python :tangle "./chm_exact_v2.py"
-def solve_lp_exact(obj_inds, opt, h_add, h0_add):
+def solve_lp_exact(obj_inds, opt, h_add, h0_add, RIDS, lp_prob):
     """
     Solves LP exactly
     """
@@ -578,7 +594,7 @@ def update_CH(new_p, epts, chull, dims):
       + outputs (object-type) :: chull (dict), epts (sympy.Matrix)
       + depends (return object/return object type/self-depends) :: read_problem (probl/dict), create_lp (p/), initial_points (eps/sympy.Matrix/solve_lp_exact, extreme_point),initial_hull (hull/?/get_hyperplane), incremental_refinement (chull, eps/??/solve_lp_exact, extreme_points, update_CH)
       #+begin_src python :tangle "./chm_exact_v2.py" 
-def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
+def compute_CH(lp_data, impt_reactions, RIDS): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
     """
     Computes the convex hull for production envelopes of metabolic network. Solution is 
     the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
@@ -588,13 +604,8 @@ def compute_CH(reactions_path, s_matrix_path, domains_path, impt_reactions): # d
       - fname_d.txt : lb ub for each reaction
     ,* impt_reactions: list of indices for the dimensions onto which the CH should be computed
     """
-    lp_data = read_problem(reactions_path, s_matrix_path, domains_path)
-    obj = [0] * lp_data["Aeq"].shape[1]
-    # what does this do - fulfil syntax for qsoptex?
-    obj[impt_reactions[0]] = 1
-    lp_prob = create_lp(lp_data, obj)
     # INITIAL POINTS
-    epts = initial_points(impt_reactions)
+    epts = initial_points(impt_reactions, RIDS)
     # INITIAL HULL
     chull = initial_hull(epts, impt_reactions)
     return chull,epts
@@ -638,7 +649,7 @@ def incremental_refinement(chull, eps, dims): # depends on solve_lp_exact, extre
       + outputs (object-type) :: eps
       + depends (return object/return object type/self-depends) :: solve_lp_exact (Matrix(lp.get_values())/sympy matrix/qsoptex,sympy), extreme_point (opt/?/solve_lp_exact)
       #+begin_src python :tangle "./chm_exact_v2.py"
-def initial_points(dims): # depends on solve_lp_exact and extreme_point
+def initial_points(dims,RIDS): # depends on solve_lp_exact and extreme_point
     """
     Computes Initial set of Extreme Points
     """

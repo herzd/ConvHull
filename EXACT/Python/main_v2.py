@@ -7,13 +7,29 @@ the list of hyperplanes and set of extreme points of the Convex hull. Inputs are
   - INPUT_REACTIONS: list of indices for the dimensions onto which the CH should be computed
 """
 
-import chm_exact
-REACTION_FILE = "/home/daniel/ConvHull/DATA/toy/toy_reactions.txt"
-STOICHIOMETRIC_FILE = "/home/daniel/ConvHull/DATA/toy/toy_stoichs.txt"
-DOMAIN_FILE = "/home/daniel/ConvHull/DATA/toy/toy_domains.txt"
+import chm_exact_v2
+from chm_exact_v2 import read_problem, create_lp
+# given information
+REACTION_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_reactions.txt"
+STOICHIOMETRIC_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_stoichs.txt"
+DOMAIN_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_domains.txt"
 INPUT_REACTIONS = [0, 1]
 
-CHULL, EPTS = chm_exact.compute_CH(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE, INPUT_REACTIONS)
-REFINED_CHULL, REFINED_EPTS = chm_exact.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS)
-print(REFINED_CHULL)
-print(REFINED_EPTS)
+# create dictionary from the above files for further processing
+PROBLEM_READ = chm_exact_v2.read_problem(REACTION_FILE, STOICHIOMETRIC_FILE, DOMAIN_FILE)
+# create some information for qsopt_ex (this makes a list of 3 zeros)
+OBJ = [0] * PROBLEM_READ["Aeq"].shape[1]
+# this sets the first zero to 1
+OBJ[INPUT_REACTIONS[0]] = 1
+# create linear problem from the dictionary to get rid off global statements within functions
+PROBLEM_CREATED = chm_exact_v2.create_lp(PROBLEM_READ,OBJ)
+# extract reaction ids, to get rid off the global statements within functions
+REACTION_IDS = PROBLEM_READ["rids"]
+CHULL, EPTS = chm_exact_v2.compute_CH(PROBLEM_READ, INPUT_REACTIONS, REACTION_IDS)
+
+
+# print(CHULL)
+# print(EPTS)
+# REFINED_CHULL, REFINED_EPTS = chm_exact.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS)
+# print(REFINED_CHULL)
+# print(REFINED_EPTS)
