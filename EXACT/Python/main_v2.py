@@ -8,7 +8,6 @@ the list of hyperplanes and set of extreme points of the Convex hull. Inputs are
 """
 
 import chm_exact_v2
-from chm_exact_v2 import read_problem, create_lp
 # given information
 REACTION_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_reactions.txt"
 STOICHIOMETRIC_FILE = "/home/dherzig/ConvHull/DATA/toy/toy_stoichs.txt"
