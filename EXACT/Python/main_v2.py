@@ -25,11 +25,10 @@ OBJ[INPUT_REACTIONS[0]] = 1
 PROBLEM_CREATED = chm_exact_v2.create_lp(PROBLEM_READ,OBJ)
 # extract reaction ids, to get rid off the global statements within functions
 REACTION_IDS = PROBLEM_READ["rids"]
-CHULL, EPTS = chm_exact_v2.compute_CH(PROBLEM_READ, INPUT_REACTIONS, REACTION_IDS)
-
-
-# print(CHULL)
-# print(EPTS)
-# REFINED_CHULL, REFINED_EPTS = chm_exact.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS)
-# print(REFINED_CHULL)
-# print(REFINED_EPTS)
+CHULL, EPTS = chm_exact_v2.compute_CH(PROBLEM_READ, INPUT_REACTIONS, REACTION_IDS, PROBLEM_CREATED)
+# refine results
+REFINED_CHULL, REFINED_EPTS = chm_exact_v2.incremental_refinement(CHULL, EPTS, INPUT_REACTIONS, REACTION_IDS, PROBLEM_CREATED)
+print("refined convex hull after refinement:")
+print(REFINED_CHULL)
+print("refined set of points:")
+print(REFINED_EPTS)
