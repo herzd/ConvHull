@@ -1,9 +1,56 @@
 """ library of functions for the exact convhull python algorithm"""
 
 from fractions import Fraction
+import os
+import urllib
 import sys
+import xml.etree.ElementTree
 import qsoptex
 from sympy import Matrix, sympify
+
+def download_model(url):
+    '''downloads existing model from the web, url has to be a string.
+    returns absolute path of downloaded file as string.'''
+    filename = url.split("/")[-1:][0]
+    filepath = os.path.abspath(filename)
+    with urllib.request.urlopen(url) as traveller:
+        with open(filepath,"wb") as destination:
+            destination.write(traveller.read())
+    return filepath
+
+def parse_xml_model(model):
+    '''parses existing xml model, given as path..
+    if gunzipped, unzips automatically. returns xml.etree.ElementTree object'''
+    if model.endswith("gz"):
+        with gzip.open(model) as unpacked:
+            tree = xml.etree.ElementTree.parse(unpacked)
+            root = tree.getroot()
+    else:
+        tree = xml.etree.ElementTree.parse(model)
+        root = tree.getroot()
+    return root
+
+def extract_parameters(model):
+    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
+    a list of tuples containing id and value of the given parameters.'''
+    parameter_list = []
+    parameters_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
+                                     "{http://www.sbml.org/sbml/level3/version1/core}listOfParameters/"
+                                     "{http://www.sbml.org/sbml/level3/version1/core}parameter")
+    for parameter in parameters_model:
+        parameter_list.append((parameter.attrib["id"],parameter.attrib["value"]))
+    return parameter_list
+
+def extract_metabolites(model):
+    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
+    a list of tuples containing id and name of the given metabolites.'''
+    metabolite_list = []
+    metabolites_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
+                                      "{http://www.sbml.org/sbml/level3/version1/core}listOfSpecies/"
+                                      "{http://www.sbml.org/sbml/level3/version1/core}species")
+    for metabolite in metabolites_model:
+        metabolite_list.append((metabolite.attrib["id"],metabolite.attrib["name"]))
+    return metabolite_list
 
 def solve_lp_exact(obj_inds, opt, h_add, h0_add, reaction_ids, lp_prob):
     """
@@ -13,22 +60,22 @@ def solve_lp_exact(obj_inds, opt, h_add, h0_add, reaction_ids, lp_prob):
     # change objective
     new_obj = {}
     # set integers when possible to speed up computation
-    for id, value in enumerate(obj_inds):
-        if sympify(obj_inds[id]).is_integer or obj_inds[id] == 0:
-            new_obj[reaction_ids[id]] = int(obj_inds[id])
-        elif sympify(obj_inds[id]).is_rational:
-            new_obj[reaction_ids[id]] = Fraction(str(obj_inds[id]))
+    for pos, value in enumerate(obj_inds):
+        if sympify(obj_inds[pos]).is_integer or obj_inds[pos] == 0:
+            new_obj[reaction_ids[pos]] = int(obj_inds[pos])
+        elif sympify(obj_inds[pos]).is_rational:
+            new_obj[reaction_ids[pos]] = Fraction(str(obj_inds[pos]))
     lp_prob.set_linear_objective(new_obj)
     # additional constraints other than stoichiometric, if any
     if h_add and h0_add:
         flag_a = 1
         constr = {}
-        for id,value in enumerate(h_add):
-            if h_add[id] != 0:
-                if sympify(h_add[id]).is_integer:
-                    constr[reaction_ids[id]] = int(h_add[id])
-                elif sympify(h_add[id]).is_rational:
-                    constr[reaction_ids[id]] = Fraction(str(h_add[id]))
+        for pos,value in enumerate(h_add):
+            if h_add[pos] != 0:
+                if sympify(h_add[pos]).is_integer:
+                    constr[reaction_ids[pos]] = int(h_add[pos])
+                elif sympify(h_add[pos]).is_rational:
+                    constr[reaction_ids[pos]] = Fraction(str(h_add[pos]))
         lp_prob.add_linear_constraint(qsoptex.ConstraintSense.EQUAL,
                                       constr,
                                       rhs=Fraction(str(h0_add[0])))
