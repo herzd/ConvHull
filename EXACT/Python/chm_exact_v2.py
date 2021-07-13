@@ -1,9 +1,11 @@
+""" library of functions for the exact convhull python algorithm"""
+
+from fractions import Fraction
 import sys
 import qsoptex
 from sympy import Matrix, sympify
-from fractions import Fraction
 
-def solve_lp_exact(obj_inds, opt, h_add, h0_add, RIDS, lp_prob):
+def solve_lp_exact(obj_inds, opt, h_add, h0_add, reaction_ids, lp_prob):
     """
     Solves LP exactly
     """
@@ -11,23 +13,25 @@ def solve_lp_exact(obj_inds, opt, h_add, h0_add, RIDS, lp_prob):
     # change objective
     new_obj = {}
     # set integers when possible to speed up computation
-    for i in range(len(obj_inds)):
-        if sympify(obj_inds[i]).is_integer or obj_inds[i] == 0:
-            new_obj[RIDS[i]] = int(obj_inds[i])
-        elif sympify(obj_inds[i]).is_rational:
-            new_obj[RIDS[i]] = Fraction(str(obj_inds[i]))
+    for id, value in enumerate(obj_inds):
+        if sympify(obj_inds[id]).is_integer or obj_inds[id] == 0:
+            new_obj[reaction_ids[id]] = int(obj_inds[id])
+        elif sympify(obj_inds[id]).is_rational:
+            new_obj[reaction_ids[id]] = Fraction(str(obj_inds[id]))
     lp_prob.set_linear_objective(new_obj)
     # additional constraints other than stoichiometric, if any
     if h_add and h0_add:
         flag_a = 1
         constr = {}
-        for j in range(len(h_add)):
-            if h_add[j] != 0:
-                if sympify(h_add[j]).is_integer:
-                    constr[RIDS[j]] = int(h_add[j])
-                elif sympify(h_add[i]).is_rational:
-                    constr[RIDS[j]] = Fraction(str(h_add[j]))
-        lp_prob.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=Fraction(str(h0_add[0])))
+        for id,value in enumerate(h_add):
+            if h_add[id] != 0:
+                if sympify(h_add[id]).is_integer:
+                    constr[reaction_ids[id]] = int(h_add[id])
+                elif sympify(h_add[id]).is_rational:
+                    constr[reaction_ids[id]] = Fraction(str(h_add[id]))
+        lp_prob.add_linear_constraint(qsoptex.ConstraintSense.EQUAL,
+                                      constr,
+                                      rhs=Fraction(str(h0_add[0])))
     if opt == -1:
         lp_prob.set_objective_sense(qsoptex.ObjectiveSense.MAXIMIZE)
     elif opt == 1:
@@ -66,7 +70,10 @@ def create_lp(polyt, obj_inds):
     [lbs, ubs] = domain
     # add variables to lp
     for i in range(len(rids)):
-        p.add_variable(name=rids[i], objective=Fraction(str(obj_inds[i])), lower=lbs[i], upper=ubs[i])
+        p.add_variable(name=rids[i],
+                       objective=Fraction(str(obj_inds[i])),
+                       lower=lbs[i],
+                       upper=ubs[i])
     # constraints
     # for each row in S (metabolite) = for each constraint
     for i in range(Aeq.shape[0]):
@@ -153,26 +160,26 @@ def update_CH(new_p, epts, chull, dims):
     chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return chull
 
-def compute_CH(lp_data, impt_reactions, RIDS, lp_prob): # depends on read_problem, create_lp, initial_points, initial_hull, and incremental_refinement
+def compute_CH(lp_data, impt_reactions, reaction_ids, lp_prob):
     """
-    Computes the convex hull for production envelopes of metabolic network. Solution is 
+    Computes the convex hull for production envelopes of metabolic network. Solution is
     the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
-    * fname: name of file without extension (must be the same for all files
+      - lp_data: dictionary containing the keys 'rids', 'Aeq', 'beq'
       - fname_r.txt: list of reaction names - order must follow that of S columns
       - fname_S.txt: Stoichiometric matrix
       - fname_d.txt : lb ub for each reaction
     * impt_reactions: list of indices for the dimensions onto which the CH should be computed
     """
     # INITIAL POINTS
-    epts = initial_points(impt_reactions, RIDS,lp_prob)
+    epts = initial_points(impt_reactions, reaction_ids,lp_prob)
     # INITIAL HULL
     chull = initial_hull(epts, impt_reactions)
     return chull,epts
 
-def incremental_refinement(chull, eps, dims, RIDS, lp_prob): # depends on solve_lp_exact, extreme_point, update_CH
+def incremental_refinement(chull, eps, dims, reaction_ids, lp_prob):
     """
-    Refine initial convex hull is refined by maximizing/minimizing the \hps
-    containing the \eps until all the facets of the projection are terminal.
+    Refine initial convex hull is refined by maximizing/minimizing the hps
+    containing the eps until all the facets of the projection are terminal.
     """
     while sum([chull[k][2] for k in range(len(chull))]) != 0:
         for i in range(len(chull)):
@@ -180,12 +187,12 @@ def incremental_refinement(chull, eps, dims, RIDS, lp_prob): # depends on solve_
                 break
             h = chull[i][0][0]
             h0 = chull[i][0][1]
-            opt = solve_lp_exact(h, -1, [], [], RIDS, lp_prob)
+            opt = solve_lp_exact(h, -1, [], [], reaction_ids, lp_prob)
             hx = h * opt
             if hx[0] == h0:
                 chull[i][2] = 0
             else:
-                ep = extreme_point(h, hx, -1, dims, RIDS, lp_prob)
+                ep = extreme_point(h, hx, -1, dims, reaction_ids, lp_prob)
                 if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
                     eps = eps.col_insert(eps.shape[1], ep)
                     chull = update_CH(ep, eps, chull, dims)
@@ -198,48 +205,48 @@ def incremental_refinement(chull, eps, dims, RIDS, lp_prob): # depends on solve_
         chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return chull, eps
 
-def initial_points(dims,RIDS, lp_prob): # depends on solve_lp_exact and extreme_point
+def initial_points(dims,reaction_ids, lp_prob): # depends on solve_lp_exact and extreme_point
     """
     Computes Initial set of Extreme Points
     """
-    h = [0] * len(RIDS)
+    h = [0] * len(reaction_ids)
     h[dims[0]] = 1
     h = Matrix([h])
     # max
-    opt = solve_lp_exact(h, -1, [], [], RIDS, lp_prob)
+    opt = solve_lp_exact(h, -1, [], [], reaction_ids, lp_prob)
     hx = h * opt
-    eps = extreme_point(h, hx, -1, dims, RIDS, lp_prob)
+    eps = extreme_point(h, hx, -1, dims, reaction_ids, lp_prob)
     # min
-    opt = solve_lp_exact(h, 1, [], [], RIDS, lp_prob)
+    opt = solve_lp_exact(h, 1, [], [], reaction_ids, lp_prob)
     hx = h * opt
-    ep = extreme_point(h, hx, 1, dims, RIDS, lp_prob)
+    ep = extreme_point(h, hx, 1, dims, reaction_ids, lp_prob)
     # if extreme point already in the list of EPs
     if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
         eps = eps.col_insert(eps.shape[1], ep)
     while eps.shape[1] <= len(dims):
         [h, h0] = get_hyperplane(eps, dims)
-        opt = solve_lp_exact(h, 1, [], [], RIDS, lp_prob)
+        opt = solve_lp_exact(h, 1, [], [], reaction_ids, lp_prob)
         hx = h * opt
         if hx[0] != h0:
-            ep = extreme_point(h, hx, 1, dims, RIDS, lp_prob)
+            ep = extreme_point(h, hx, 1, dims, reaction_ids, lp_prob)
             if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
                 eps = eps.col_insert(eps.shape[1], ep)
         else:
             opt = solve_lp_exact(h, -1, [], [])
             hx = h * opt
-            ep = extreme_point(h, hx, -1, dims, RIDS, lp_prob)
+            ep = extreme_point(h, hx, -1, dims, reaction_ids, lp_prob)
             if not any([eps[dims, j] == ep[dims, :] for j in range(eps.shape[1])]):
                 eps = eps.col_insert(eps.shape[1], ep)
     return eps
 
-def extreme_point(h, h0, optim, dims, RIDS, lp_prob): # depends on solve_lp_exact
+def extreme_point(h, h0, optim, dims, reaction_ids, lp_prob): # depends on solve_lp_exact
     """
     Computes the extreme point of the projection
     """
     obj = [0] * len(h)
     for i in range(len(dims)):
         obj[dims[i]] = 1
-    opt = solve_lp_exact(obj, optim, h, h0, RIDS, lp_prob)
+    opt = solve_lp_exact(obj, optim, h, h0, reaction_ids, lp_prob)
     return opt
 
 def initial_hull(pnts, dims): # depends on get_hyperplane
