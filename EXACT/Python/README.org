@@ -402,7 +402,7 @@ from fractions import Fraction
       #+end_src
      
 ***** TODO solve_lp_exact
-      + inputs (object-type) :: obj_inds (?), opt (?), h_add (?), h0_add (?)
+      + inputs (object-type) :: obj_inds (list), opt (?), h_add (?), h0_add (?)
       + outputs(object-type) :: Matrix(lp.get_values()) (sympy matrix)
       + depends (packages) :: sympy, qsoptex
       #+begin_src python :tangle "./chm_exact_v2.py"
@@ -606,7 +606,7 @@ def compute_CH(lp_data, impt_reactions, RIDS, lp_prob): # depends on read_proble
     return chull,epts
       #+end_src
 ***** TODO incremental_refinement
-      + inputs (object-type) :: chull (?), eps (?), dims (?)
+      + inputs (object-type) :: chull (dictionary), eps (?), dims (?)
       + outputs (object-type) :: chull (?), eps (?)
       + depends (return object/return object type/self-depends) :: solve_lp_exact (Matrix(lp.get_values())/sympy matrix/qsoptex,sympy), extreme_point (opt/?/solve_lp_exact), update_CH (chull/?/get_hyperplane)
       #+begin_src python :tangle "./chm_exact_v2.py"
