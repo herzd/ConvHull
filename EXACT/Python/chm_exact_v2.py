@@ -33,45 +33,44 @@ def parse_xml_model(model):
 def extract_parameters(model):
     '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
     a list of tuples containing id and value of the given parameters.'''
-    parameter_list = []
     parameters_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
                                      "{http://www.sbml.org/sbml/level3/version1/core}listOfParameters/"
                                      "{http://www.sbml.org/sbml/level3/version1/core}parameter")
-    for parameter in parameters_model:
-        parameter_list.append((parameter.attrib["id"],parameter.attrib["value"]))
+    parameter_list = [(parameter.attrib["id"],
+                       parameter.attrib["value"])
+                      for parameter in parameters_model]
     return parameter_list
 
 def extract_metabolites(model):
     '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
     a list of tuples containing id and name of the given metabolites.'''
-    metabolite_list = []
     metabolites_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
                                       "{http://www.sbml.org/sbml/level3/version1/core}listOfSpecies/"
                                       "{http://www.sbml.org/sbml/level3/version1/core}species")
-    for metabolite in metabolites_model:
-        metabolite_list.append((metabolite.attrib["id"],metabolite.attrib["name"]))
+    metabolite_list = [(metabolite.attrib["id"],
+                        metabolite.attrib["name"])
+                       for metabolite in metabolites_model]
     return metabolite_list
 
 def extract_reactions(model):
     '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
     a list of tuples containing reaction-name, lower bound, and upper bound'''
-    reaction_list = []
-    # the following two definitions are just done to keep the linelength in range
+    # the following two definitions are just here to keep the linelength in range
     fbc_lb_string = "{http://www.sbml.org/sbml/level3/version1/fbc/version2}lowerFluxBound"
     fbc_ub_string = "{http://www.sbml.org/sbml/level3/version1/fbc/version2}upperFluxBound"
     reactions_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
                                     "{http://www.sbml.org/sbml/level3/version1/core}listOfReactions/"
                                     "{http://www.sbml.org/sbml/level3/version1/core}reaction")
-    for reaction in reactions_model:
-        reaction_list.append((reaction.attrib["name"],
-                              reaction.attrib[fbc_lb_string],
-                              reaction.attrib[fbc_ub_string]))
+    reaction_list = [(reaction.attrib["name"],
+                      reaction.attrib[fbc_lb_string],
+                      reaction.attrib[fbc_ub_string])
+                     for reaction in reactions_model]
     return reaction_list
 
 def resolve_parameters(reaction_list, parameters):
     '''takes the list of reactions containing the unresolved (simply named) parameters
-    and replaces them by the actual values by the values from the parameters list (second
-    argument). returns the reaction list with filled integer values.'''
+    and replaces them by the actual values from the parameters list (second argument).
+    returns the reaction list with filled integer values for bounds .'''
     updated_reaction_list = []
     for reaction in reaction_list:
         for parameter in parameters:
