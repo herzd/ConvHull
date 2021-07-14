@@ -52,6 +52,40 @@ def extract_metabolites(model):
         metabolite_list.append((metabolite.attrib["id"],metabolite.attrib["name"]))
     return metabolite_list
 
+def extract_reactions(model):
+    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
+    a list of tuples containing reaction-name, lower bound, and upper bound'''
+    reaction_list = []
+    # the following two definitions are just done to keep the linelength in range
+    fbc_lb_string = "{http://www.sbml.org/sbml/level3/version1/fbc/version2}lowerFluxBound"
+    fbc_ub_string = "{http://www.sbml.org/sbml/level3/version1/fbc/version2}upperFluxBound"
+    reactions_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
+                                    "{http://www.sbml.org/sbml/level3/version1/core}listOfReactions/"
+                                    "{http://www.sbml.org/sbml/level3/version1/core}reaction")
+    for reaction in reactions_model:
+        reaction_list.append((reaction.attrib["name"],
+                              reaction.attrib[fbc_lb_string],
+                              reaction.attrib[fbc_ub_string]))
+    return reaction_list
+
+def resolve_parameters(reaction_list, parameters):
+    '''takes the list of reactions containing the unresolved (simply named) parameters
+    and replaces them by the actual values by the values from the parameters list (second
+    argument). returns the reaction list with filled values.'''
+    updated_reaction_list = []
+    lower_bound_int = int()
+    upper_bound_int = int()
+    for reaction in reaction_list:
+        for parameter in parameters:
+            if reaction[1] == parameter[0]:
+                lower_bound_int = parameter[1]
+            elif reaction[2] == parameter[0]:
+                upper_bound_int = parameter[1]
+        updated_reaction_list.append((reaction[0],
+                                      lower_bound_int,
+                                      upper_bound_int))
+    return updated_reaction_list
+
 def solve_lp_exact(obj_inds, opt, h_add, h0_add, reaction_ids, lp_prob):
     """
     Solves LP exactly
