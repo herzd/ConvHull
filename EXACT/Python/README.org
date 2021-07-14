@@ -495,9 +495,28 @@ def extract_reactions(model):
     return reaction_list
       #+end_src
 ***** extract_stoichiometry
-      Function to extract the stoichiometric information from model
+      Function to extract the stoichiometric information from model, return it as list of tuples
+      containing reaction name and the inversed stoichiometric value as int.
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def extract_stoichiometry(model):
+    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
+    a list of tuples containing reaction-name and the negative stoichiometric value as int'''
+    # make sure that we match the item we want to process
+    index_list_of_reactions = int()
+    indices_individual_reactions = []
+    for index,child in enumerate(model[0]):
+        if "listOfReactions" in str(child):
+            index_list_of_reactions = index
+    for index,reaction in enumerate(model[0][index_list_of_reactions]):
+        for index,thing in enumerate(model[0][index_list_of_reactions][index]):
+            print(index,thing)
+    # for index,reaction in enumerate(model[0][list_of_reactions]):
+    #     for index,list_of_products in enumerate(model[0][list_of_reactions][index]):
+            #print(list_of_products)
 
       #+end_src
+
+
 ***** resolve_parameters
       Function to resolve lower and upper fluxbounds to actual numbers.
       #+begin_src python :tangle "./chm_exact_v2.py"

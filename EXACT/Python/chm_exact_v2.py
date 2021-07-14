@@ -67,6 +67,22 @@ def extract_reactions(model):
                      for reaction in reactions_model]
     return reaction_list
 
+def extract_stoichiometry(model):
+    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
+    a list of tuples containing reaction-name and the negative stoichiometric value as int'''
+    # make sure that we match the item we want to process
+    index_list_of_reactions = int()
+    indices_individual_reactions = []
+    for index,child in enumerate(model[0]):
+        if "listOfReactions" in str(child):
+            index_list_of_reactions = index
+    for index,reaction in enumerate(model[0][index_list_of_reactions]):
+        for index,thing in enumerate(model[0][index_list_of_reactions][index]):
+            print(index,thing)
+    # for index,reaction in enumerate(model[0][list_of_reactions]):
+    #     for index,list_of_products in enumerate(model[0][list_of_reactions][index]):
+            #print(list_of_products)
+
 def resolve_parameters(reaction_list, parameters):
     '''takes the list of reactions containing the unresolved (simply named) parameters
     and replaces them by the actual values from the parameters list (second argument).
