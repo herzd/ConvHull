@@ -466,7 +466,7 @@ def extract_metabolites(model):
       #+END_SRC
 ***** extract_stoichiometry
       Function to extract the stoichiometric information from model, return it as list of tuples
-      containing reaction name and the inversed stoichiometric value as int. This here is more of a memo for now.
+      containing reaction name and the inversed stoichiometric value as int.
       #+begin_src python :tangle "./chm_exact_v2.py"
 def extract_stoichiometry(model):
     '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
