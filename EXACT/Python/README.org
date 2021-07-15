@@ -355,8 +355,8 @@ def hp_in_CH(h, h0, v, chull):
     The 'main' program is now integrated into the 'library' for a more compact design.
 **** independent functions
      The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
-***** docstring
-      #+BEGIN_SRC python :tangle "./chm_exact_v2.py"
+***** shebang and docstring
+      #+BEGIN_SRC python :tangle "./chm_exact_v2.py" :shebang "#!/usr/bin/env python3"
 """ library of functions for the exact convhull python algorithm"""
       #+END_SRC
 ***** dependencies

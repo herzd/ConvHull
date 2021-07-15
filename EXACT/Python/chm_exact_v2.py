@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ library of functions for the exact convhull python algorithm"""
 
 import argparse
@@ -396,13 +397,15 @@ def main():
                              reaction_ids,
                              problem_created)
     # refine results
-    refined_chull, refined_epts = chm_exact_v2.incremental_refinement(chull,
-                                                                      epts,
-                                                                      input_reactions,
-                                                                      reaction_ids,
-                                                                      problem_created)
+    refined_chull, refined_epts = incremental_refinement(chull,
+                                                         epts,
+                                                         input_reactions,
+                                                         reaction_ids,
+                                                         problem_created)
     print("refined convex hull after refinement:")
     print(refined_chull)
     print("refined set of points:")
     print(refined_epts)
 
+if __name__ == "__main__":
+    main()
