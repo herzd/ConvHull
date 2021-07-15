@@ -3,6 +3,7 @@
 
 import argparse
 import fractions
+import gzip
 import os
 import sys
 import urllib
@@ -89,17 +90,20 @@ def extract_stoichiometry(model):
     '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
     a list of tuples containing reaction-name and the negative stoichiometric value as int'''
     # make sure that we match the item we want to process
-    index_list_of_reactions = int()
-    indices_individual_reactions = []
-    for index,child in enumerate(model[0]):
-        if "listOfReactions" in str(child):
-            index_list_of_reactions = index
-    for index,reaction in enumerate(model[0][index_list_of_reactions]):
-        for index,thing in enumerate(model[0][index_list_of_reactions][index]):
-            print(index,thing)
-    # for index,reaction in enumerate(model[0][list_of_reactions]):
-    #     for index,list_of_products in enumerate(model[0][list_of_reactions][index]):
-            #print(list_of_products)
+    stoichiometric_list = []
+    reaction_list = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
+                                  "{http://www.sbml.org/sbml/level3/version1/core}listOfReactions/")
+    for reaction in reaction_list:
+        for child in reaction[0]:
+            if "listOfProducts" in str(reaction[0]):
+                stoichiometric_list.append((reaction.attrib['name'],
+                                           child.attrib['species'],
+                                           abs(int(child.attrib['stoichiometry']))))
+            elif "listOfReactants" in str(reaction[0]):
+                stoichiometric_list.append((reaction.attrib['name'],
+                                           child.attrib['species'],
+                                           -abs(int(child.attrib['stoichiometry']))))
+    return stoichiometric_list
 
 def solve_lp_exact(obj_inds, opt, h_add, h0_add, reaction_ids, lp_prob):
     """
