@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<sbml xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version2" xmlns="http://www.sbml.org/sbml/level3/version1/core" level="3" version="1" sboTerm="SBO:0000624" fbc:required="false">
+  <model fbc:strict="true" id="iToy">
+    <listOfUnitDefinitions>
+      <unitDefinition id="mmol_per_gDW_per_hr">
+        <listOfUnits>
+          <unit kind="mole" scale="-3" multiplier="1" exponent="1"/>
+          <unit kind="gram" scale="0" multiplier="1" exponent="-1"/>
+          <unit kind="second" scale="0" multiplier="3600" exponent="-1"/>
+        </listOfUnits>
+      </unitDefinition>
+    </listOfUnitDefinitions>
+    <fbc:listOfObjectives fbc:activeObjective="obj1">
+      <fbc:objective fbc:id="obj1" fbc:type="maximize">
+        <fbc:listOfFluxObjectives>
+          <fbc:fluxObjective fbc:reaction="R_R1" fbc:coefficient="1"/>
+        </fbc:listOfFluxObjectives>
+      </fbc:objective>
+      <fbc:objective fbc:id="obj2" fbc:type="minimize">
+        <fbc:listOfFluxObjectives>
+          <fbc:fluxObjective fbc:reaction="R_R2" fbc:coefficient="1"/>
+        </fbc:listOfFluxObjectives>
+      </fbc:objective>
+    </fbc:listOfObjectives>
+    <listOfParameters>
+      <parameter value="-1000" id="cobra_default_lb" sboTerm="SBO:0000626" constant="true" units="mmol_per_gDW_per_hr"/>
+      <parameter value="1000" id="cobra_default_ub" sboTerm="SBO:0000626" constant="true" units="mmol_per_gDW_per_hr"/>
+      <parameter value="0" id="cobra_0_bound" sboTerm="SBO:0000626" constant="true" units="mmol_per_gDW_per_hr"/>
+      <parameter id="minus_one" value="-1" sboTerm="SBO:0000625" constant="true" units="mmol_per_gDW_per_hr"/>
+      <parameter id="three" value="3" sboTerm="SBO:0000625" constant="true" units="mmol_per_gDW_per_hr"/>
+      <parameter id="two" value="2" sboTerm="SBO:0000625" constant="true" units="mmol_per_gDW_per_hr"/>
+    </listOfParameters>
+    <listOfCompartments>
+      <compartment id="c" name="cytosol" constant="true"/>
+    </listOfCompartments>
+    <listOfSpecies> <!-- list of metabolites-->
+      <species id="M_a_c" constant="false" boundaryCondition="false" hasOnlySubstanceUnits="false" name="A" metaid="M_a_c" compartment="c" fbc:charge="0">
+      </species>
+    </listOfSpecies>
+    <fbc:listOfGeneProducts>
+      <fbc:geneProduct fbc:id="G_r1" fbc:label="gr1" fbc:name="GR1" metaid="G_r1">
+      </fbc:geneProduct>
+      <fbc:geneProduct fbc:id="G_r2a" fbc:label="gr2a" fbc:name="GR2a" metaid="G_r2a">
+      </fbc:geneProduct>
+      <fbc:geneProduct fbc:id="G_r2b" fbc:label="gr2b" fbc:name="GR2b" metaid="G_r2b">
+      </fbc:geneProduct>
+      <fbc:geneProduct fbc:id="G_r3" fbc:label="gr3" fbc:name="GR3" metaid="G_r3">
+      </fbc:geneProduct>
+    </fbc:listOfGeneProducts>
+    <listOfReactions> <!-- stoichiometric matrix -->
+      <reaction id="R_R1" fast="false" reversible="false" name="R1" metaid="R_R1" sboTerm="SBO:0000627" fbc:upperFluxBound="three" fbc:lowerFluxBound="cobra_0_bound">
+        <listOfProducts>
+          <speciesReference species="M_a_c" stoichiometry="1" constant="true"/>
+        </listOfProducts>
+        <fbc:geneProductAssociation>
+          <fbc:geneProductRef fbc:geneProduct="G_r1"/>
+        </fbc:geneProductAssociation>
+      </reaction>
+      <reaction id="R_R2" fast="false" reversible="true" name="R2" metaid="R_R2" sboTerm="SBO:0000627" fbc:upperFluxBound="cobra_default_ub" fbc:lowerFluxBound="minus_one">
+        <listOfReactants> <!--reactant has to be interpreted as negative stoichiometric coefficient-->
+          <speciesReference species="M_a_c" stoichiometry="1" constant="true"/>
+        </listOfReactants>
+        <fbc:geneProductAssociation>
+          <fbc:and>
+            <fbc:geneProductRef fbc:geneProduct="G_r2a"/>
+            <fbc:geneProductRef fbc:geneProduct="G_r2b"/>
+          </fbc:and>
+        </fbc:geneProductAssociation>
+      </reaction>
+      <reaction id="R_R3" fast="false" reversible="false" name="R3" metaid="R_R3" sboTerm="SBO:0000627" fbc:upperFluxBound="two" fbc:lowerFluxBound="cobra_0_bound">
+        <listOfReactants>
+          <speciesReference species="M_a_c" stoichiometry="1" constant="true"/>
+        </listOfReactants> <!-- reactant has to be interpreted as negative stoichiometric coefficient-->
+        <fbc:geneProductAssociation>
+          <fbc:geneProductRef fbc:geneProduct="G_r3"/>
+        </fbc:geneProductAssociation>
+      </reaction>
+    </listOfReactions>
+  </model>
+</sbml>

@@ -352,7 +352,7 @@ def hp_in_CH(h, h0, v, chull):
 
 ** workon
 *** TODO structural library analysis for speed tuning
-    The 'main' program is now integrated into the 'library' for a more compact design.
+    The 'main' program is now integrated into the 'library' for a more compact design. It can be run with ~python3 chm_exact_v2.py -m ../../DATA/toy/iToy.xml 2~ and yields the same results as the original one. 
 **** independent functions
      The following functions partly depend on sympy and qsoptex, but do not depend on each other. 
 ***** shebang and docstring
@@ -555,6 +555,47 @@ def get_hyperplane(pts, dims):
     h0 = hess[0][-1]
     return [h, h0]
       #+end_src
+***** read_problem
+      + inputs (object-type) :: reactions_path (textfile), s_matrix_path (textfile), domains_path (textfile)
+      + outputs (object-type) :: probl (dict)
+      + depends (packages) :: sympy
+      #+begin_src python :tangle "./chm_exact_v2.py"
+def read_problem(reactions_file, stoichiometrics_file, domains_file):
+    """
+    Read LP problem from 3 files: reactions, Stoichiometric matrix, and constraints
+    """
+    problem = {}
+    # read reaction names
+    reac_names = []
+    with open(reactions_file, "r") as file_to_read:
+        for line in file_to_read.readlines():
+            line = line.strip()
+            reac_names.append(line)
+    problem["rids"] = reac_names
+    # read upper and lower bounds of reactions (domain)
+    lower_bounds = []
+    upper_bounds = []
+    with open(domains_file, "r") as file_to_read:
+        for line in file_to_read.readlines():
+            info = line.strip()
+            info = line.split()
+            lower_bounds.append(int(info[0]))
+            upper_bounds.append(int(info[1]))
+    problem["domain"] = [lower_bounds, upper_bounds]
+    # read stoichiometric matrix. Rows=metabolites, columns=reactions
+    S = []
+    with open(stoichiometrics_file, "r") as file_to_read:
+        for line in file_to_read.readlines():
+            line = line.strip()
+            row = []
+            for column in line.split():
+                row.append(int(column))
+            S.append(row)
+    beq = [0] * len(S)
+    problem["Aeq"] = sympy.Matrix(S)
+    problem["beq"] = sympy.Matrix(beq)
+    return problem
+      #+end_src
 ***** TODO create_lp
       + inputs (object-type) :: polyt (?), obj_inds (?)
       + outputs (object-type) :: p (?)
@@ -563,15 +604,15 @@ def get_hyperplane(pts, dims):
 def create_lp(polyt, obj_inds):
     """ Creates core LP problem with the Stoichiometric Matrix and list of constraints"""
     # create problem
-    p = qsoptex.ExactProblem()
-    [Aeq, beq, rids, domain] = [polyt["Aeq"], polyt["beq"], polyt["rids"], polyt["domain"]]
-    [lbs, ubs] = domain
-    # add variables to lp
+    problem = qsoptex.ExactProblem()
+    Aeq,beq,rids = polyt["Aeq"], polyt["beq"], polyt["rids"]
+    lower_bound,upper_bound = polyt["domain"]
+    # add variables to linear problem
     for i in range(len(rids)):
-        p.add_variable(name=rids[i],
-                       objective=fractions.Fraction(str(obj_inds[i])),
-                       lower=lbs[i],
-                       upper=ubs[i])
+        problem.add_variable(name=rids[i],
+                             objective=fractions.Fraction(str(obj_inds[i])),
+                             lower=lower_bound[i],
+                             upper=upper_bound[i])
     # constraints
     # for each row in S (metabolite) = for each constraint
     for i in range(Aeq.shape[0]):
@@ -580,49 +621,8 @@ def create_lp(polyt, obj_inds):
         for j in range(Aeq.shape[1]):
             if Aeq[i, j] != 0:
                 constr[rids[j]] = int(Aeq[i, j])
-        p.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=int(beq[i]))
-    return p
-      #+end_src
-***** read_problem
-      + inputs (object-type) :: reactions_path (textfile), s_matrix_path (textfile), domains_path (textfile)
-      + outputs (object-type) :: probl (dict)
-      + depends (packages) :: sympy
-      #+begin_src python :tangle "./chm_exact_v2.py"
-def read_problem(reactions_path, s_matrix_path, domains_path):
-    """
-    Read LP problem from 3 files: reactions, Stoichiometric matrix, and constraints
-    """
-    probl = {}
-    # read reaction names
-    reac_names = []
-    with open(reactions_path, "r") as filetoberead:
-        for line in filetoberead.readlines():
-            line = line.strip()
-            reac_names.append(line)
-    probl["rids"] = reac_names
-    # read upper and lower bounds of reactions (domain)
-    lbs = []
-    ubs = []
-    with open(domains_path, "r") as filetoberead:
-        for line in filetoberead.readlines():
-            info = line.strip()
-            info = line.split()
-            lbs.append(int(info[0]))
-            ubs.append(int(info[1]))
-    probl["domain"] = [lbs, ubs]
-    # read stoichiometric matrix. Rows=metabolites, columns=reactions
-    S = []
-    with open(s_matrix_path, "r") as filetoberead:
-        for line in filetoberead.readlines():
-            line = line.strip()
-            row = []
-            for column in line.split():
-                row.append(int(column))
-            S.append(row)
-    beq = [0] * len(S)
-    probl["Aeq"] = sympy.Matrix(S)
-    probl["beq"] = sympy.Matrix(beq)
-    return probl
+        problem.add_linear_constraint(qsoptex.ConstraintSense.EQUAL, constr, rhs=int(beq[i]))
+    return problem
       #+end_src
 ***** TODO hp_in_chull
       + inputs (object-type) :: h (?), h0 (?), v (?), chull (?)
@@ -808,43 +808,83 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
       #+BEGIN_SRC python :tangle "./chm_exact_v2.py"
 def main():
     """
-    main procedure using functions from above. the program needs five inputs from stdin,
-    which will be processed.
+    main procedure using functions from above. the program either takes an URL to a
+    downloadable xml(sbml) model, or a filepath to one.  Models may be gzipped.
+    If no whole model is available neither online or offline, one can also feed
+    the program with three separate files:
     - reaction_file: absolute path to file with one reaction name string in each line.
     - stoichiometric_file: absolute path to file with stoichiometric values for the reactions.
-    - domain_file: absolute path to file with lower and upper bounds for each reaction.
-    - dimensionality: int for projection dimensionality
-    This function does not return any object. 
+    - boundary_file: absolute path to file with lower and upper bounds for each reaction.
+    A dimensionality has to be given as int, to define onto how many dimensions the result
+    should be projected.
+    This function does not return any object.
     The list of hyperplanes and set of the hull's extreme points of the hull are printed to stdout.
     """
     # argument parser for easier operations with the program
-    # the following part is written to keep backwards compatibility with the concept
-    # of breaking 
-    parser = argparse.ArgumentParser(description='Calculate the convex set of given network')
-    parser.add_argument("reaction_file", type=str,
-                        help="path to file containing reaction ids line by line.")
-    parser.add_argument("stoichiometric_file", type=str,
-                        help="path to file containing stoichiometrics of reactions.")
-    parser.add_argument("domain_file", type=str,
-                        help="path to file containing upper and lower bounds.")
+    parser = argparse.ArgumentParser(description='Calculate projected convex set of given network. \
+Needs either an xml/sbml-model or 3 files containing the relevant data.')
     parser.add_argument("dimensionality", type = int,
                         help="dimension N onto which convhull shall be projected.")
+    parser.add_argument("-m", "--model_location", type=str,
+                        help="weburl pointing to sbml(xml)-model, can be a filepath too.")
+    parser.add_argument("-r", "--reaction_file", type=str,
+                        help="path to file containing reaction ids line by line.")
+    parser.add_argument("-s", "--stoichiometric_file", type=str,
+                        help="path to file containing stoichiometrics of reactions.")
+    parser.add_argument("-b", "--boundary_file", type=str,
+                        help="path to file containing upper and lower bounds.")
     arguments = parser.parse_args()
-    reaction_file = arguments.reaction_file
-    stoichiometric_file = arguments.stoichiometric_file
-    domain_file = arguments.domain_file
+    if arguments.model_location:
+        if arguments.model_location.startswith("http"):
+            model_path = download_model(arguments.model_location)
+            print("downloaded model to:\n\{}\n".format(model_path))
+        else:
+            model_path = arguments.model_location
+            print("loaded model:\n{}\n".format(model_path))
+        parsed_model = parse_xml_model(model_path)
+        stoichiometry = extract_stoichiometry(parsed_model)
+        parameters = extract_parameters(parsed_model)
+        reactions = extract_reactions(parsed_model)
+        reactions_with_bounds = resolve_parameters(reactions,parameters)
+        input_reactions = list(range(arguments.dimensionality))
+#        this one here would already deliver all needed information for the calculation
+#        print(stoichiometry,reactions_with_bounds)
+        # what's happening here dirtily is done to keep structural compatibility with the
+        # initial version of the algorithm that still sits in this code. this
+        # will be rearranged, once that one is standardized. this will have to be done,
+        # as for now it forces to destroy the node-hierarchy of sbml. we are actively
+	# losing structural information from the model. The goal is to rearrange
+	# the 'polytope = dictionary = problem_read' to hold all the information
+	# by reactions. This is technically easy, but the create_lp-function
+	# relies on this intermingled dictionary for now.
+        read_problem_init = dict.fromkeys(["rids","domain","Aeq","beq"])
+        read_problem_init["rids"] = [entry[0] for entry in stoichiometry]
+        lower_bounds = [entry[1] for entry in reactions_with_bounds]
+        upper_bounds = [entry[2] for entry in reactions_with_bounds]
+        read_problem_init["domain"] = [lower_bounds,upper_bounds]
+        read_problem_init["Aeq"] = sympy.Matrix([[entry[2] for entry in stoichiometry]])
+        read_problem_init["beq"] = sympy.Matrix([0]*len([[entry[2] for entry in stoichiometry]]))
+        problem_read = read_problem_init
+    else:
+#       this here reads the information from files (that most likely derive from
+#       a given model).
+        reaction_file = arguments.reaction_file
+        stoichiometric_file = arguments.stoichiometric_file
+        boundary_file = arguments.boundary_file
+        problem_read = read_problem(reaction_file,
+                                    stoichiometric_file,
+                                    boundary_file)
+    print("\ninitital problem:\n{}\n".format(problem_read))
+    print("projecting hull onto {} dimensions.\n".format(arguments.dimensionality))
     input_reactions = list(range(arguments.dimensionality))
-    # create dictionary from the above files for further processing
-    problem_read = read_problem(reaction_file,
-                                stoichiometric_file,
-                                domain_file)
-    # create some information for qsopt_ex (this makes a list of 3 zeros)
+    # create for qsopt_ex (with the toy data this makes a list of 3 zeros)
     objective = [0] * problem_read["Aeq"].shape[1]
     # this sets the first zero to 1
     objective[input_reactions[0]] = 1
     # create linear problem from the dictionary to get rid off global statements within functions
     problem_created = create_lp(problem_read,
                                 objective)
+    print("created linear problem with qsopt_ex.\n")
     # extract reaction ids, to get rid off the global statements within functions
     reaction_ids = problem_read["rids"]
     chull, epts = compute_chull(problem_read,
@@ -857,15 +897,123 @@ def main():
                                                          input_reactions,
                                                          reaction_ids,
                                                          problem_created)
-    print("refined convex hull:")
-    print(refined_chull)
-    print("refined set of points:")
-    print(refined_epts)
-
-
+    print("refined convex hull:\n{}\n".format(refined_chull))
+    print("refined set of points:\n{}\n".format(refined_epts))
       #+END_SRC
 **** syntax sugar for proper wrapping
      #+BEGIN_SRC python :tangle "./chm_exact_v2.py"
 if __name__ == "__main__":
     main()
      #+END_SRC
+**** run it
+***** show help
+      #+NAME: show-help
+      #+BEGIN_SRC shell :results output :exports both
+./chm_exact_v2.py -h     
+      #+END_SRC
+
+      #+RESULTS: show-help
+      #+begin_example
+      usage: chm_exact_v2.py [-h] [-m MODEL_LOCATION] [-r REACTION_FILE]
+			     [-s STOICHIOMETRIC_FILE] [-b BOUNDARY_FILE]
+			     dimensionality
+
+      Calculate projected convex set of given network. Needs either an xml/sbml-
+      model or 3 files containing the relevant data.
+
+      positional arguments:
+	dimensionality        dimension N onto which convhull shall be projected.
+
+      optional arguments:
+	-h, --help            show this help message and exit
+	-m MODEL_LOCATION, --model_location MODEL_LOCATION
+			      weburl pointing to sbml(xml)-model, can be a filepath
+			      too.
+	-r REACTION_FILE, --reaction_file REACTION_FILE
+			      path to file containing reaction ids line by line.
+	-s STOICHIOMETRIC_FILE, --stoichiometric_file STOICHIOMETRIC_FILE
+			      path to file containing stoichiometrics of reactions.
+	-b BOUNDARY_FILE, --boundary_file BOUNDARY_FILE
+			      path to file containing upper and lower bounds.
+      #+end_example
+***** run with xml
+      #+BEGIN_SRC shell :results output :exports both
+./chm_exact_v2.py -m ../../DATA/toy/iToy.xml \
+		  2
+      #+END_SRC
+
+      #+RESULTS:
+      #+begin_example
+      loaded model:
+      ../../DATA/toy/iToy.xml
+
+
+      initital problem:
+      {'rids': ['R1', 'R2', 'R3'], 'domain': [[0, -1, 0], [3, 1000, 2]], 'Aeq': Matrix([[1, -1, -1]]), 'beq': Matrix([[0]])}
+
+      projecting hull onto 2 dimensions.
+
+      created linear problem with qsopt_ex.
+
+      refined convex hull:
+      [[[Matrix([[-1, 0, 0]]), 0], Matrix([
+      [ 0, 0],
+      [-1, 0],
+      [ 1, 0]]), 0], [[Matrix([[-1, 1, 0]]), 0], Matrix([
+      [3, 0],
+      [3, 0],
+      [0, 0]]), 0], [[Matrix([[1/3, 0, 0]]), 1], Matrix([
+      [3, 3],
+      [3, 1],
+      [0, 2]]), 0], [[Matrix([[0, -1, 0]]), 1], Matrix([
+      [ 1,  0],
+      [-1, -1],
+      [ 2,  1]]), 0], [[Matrix([[1/2, -1/2, 0]]), 1], Matrix([
+      [3,  1],
+      [1, -1],
+      [2,  2]]), 0]]
+
+      refined set of points:
+      Matrix([[3, 0, 0, 3, 1], [3, -1, 0, 1, -1], [0, 1, 0, 2, 2]])
+
+      #+end_example
+***** run from separate files
+      #+BEGIN_SRC shell :results output :exports both
+./chm_exact_v2.py -r ../../DATA/toy/toy_reactions.txt \
+		  -s ../../DATA/toy/toy_stoichs.txt \
+		  -b ../../DATA/toy/toy_domains.txt \
+		  2
+      #+END_SRC
+
+      #+RESULTS:
+      #+begin_example
+
+      initital problem:
+      {'rids': ['R1', 'R2', 'R3'], 'domain': [[0, -1, 0], [3, 1000, 2]], 'Aeq': Matrix([[1, -1, -1]]), 'beq': Matrix([[0]])}
+
+      projecting hull onto 2 dimensions.
+
+      created linear problem with qsopt_ex.
+
+      refined convex hull:
+      [[[Matrix([[-1, 0, 0]]), 0], Matrix([
+      [ 0, 0],
+      [-1, 0],
+      [ 1, 0]]), 0], [[Matrix([[-1, 1, 0]]), 0], Matrix([
+      [3, 0],
+      [3, 0],
+      [0, 0]]), 0], [[Matrix([[1/3, 0, 0]]), 1], Matrix([
+      [3, 3],
+      [3, 1],
+      [0, 2]]), 0], [[Matrix([[0, -1, 0]]), 1], Matrix([
+      [ 1,  0],
+      [-1, -1],
+      [ 2,  1]]), 0], [[Matrix([[1/2, -1/2, 0]]), 1], Matrix([
+      [3,  1],
+      [1, -1],
+      [2,  2]]), 0]]
+
+      refined set of points:
+      Matrix([[3, 0, 0, 3, 1], [3, -1, 0, 1, -1], [0, 1, 0, 2, 2]])
+
+      #+end_example
