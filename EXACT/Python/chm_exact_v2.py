@@ -34,6 +34,35 @@ def parse_xml_model(model):
         root = tree.getroot()
     return root
 
+def extract_metabolites(model):
+    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
+    a list of the ids of the metabolites stored in the model.'''
+    metabolites_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
+                                      "{http://www.sbml.org/sbml/level3/version1/core}listOfSpecies/"
+                                      "{http://www.sbml.org/sbml/level3/version1/core}species")
+    metabolite_list = [metabolite.attrib["id"]
+                       for metabolite in metabolites_model]
+    return metabolite_list
+
+def extract_stoichiometry(model):
+    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
+    a list of tuples containing reaction-name and the negative stoichiometric value as int'''
+    # make sure that we match the item we want to process
+    stoichiometric_list = []
+    reaction_list = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
+                                  "{http://www.sbml.org/sbml/level3/version1/core}listOfReactions/")
+    for reaction in reaction_list:
+        for child in reaction[0]:
+            if "listOfProducts" in str(reaction[0]):
+                stoichiometric_list.append((reaction.attrib['name'],
+                                           child.attrib['species'],
+                                           abs(int(child.attrib['stoichiometry']))))
+            elif "listOfReactants" in str(reaction[0]):
+                stoichiometric_list.append((reaction.attrib['name'],
+                                           child.attrib['species'],
+                                           -abs(int(child.attrib['stoichiometry']))))
+    return stoichiometric_list
+
 def extract_parameters(model):
     '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
     a list of tuples containing id and value of the given parameters.'''
@@ -75,35 +104,6 @@ def resolve_parameters(reaction_list, parameters):
                                       lower_bound_int,
                                       upper_bound_int))
     return updated_reaction_list
-
-def extract_metabolites(model):
-    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
-    a list of the ids of the metabolites stored in the model.'''
-    metabolites_model = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
-                                      "{http://www.sbml.org/sbml/level3/version1/core}listOfSpecies/"
-                                      "{http://www.sbml.org/sbml/level3/version1/core}species")
-    metabolite_list = [metabolite.attrib["id"]
-                       for metabolite in metabolites_model]
-    return metabolite_list
-
-def extract_stoichiometry(model):
-    '''takes a parsed model in xml.etree.ElementTree.parse-getroot format and returns
-    a list of tuples containing reaction-name and the negative stoichiometric value as int'''
-    # make sure that we match the item we want to process
-    stoichiometric_list = []
-    reaction_list = model.findall("{http://www.sbml.org/sbml/level3/version1/core}model/"
-                                  "{http://www.sbml.org/sbml/level3/version1/core}listOfReactions/")
-    for reaction in reaction_list:
-        for child in reaction[0]:
-            if "listOfProducts" in str(reaction[0]):
-                stoichiometric_list.append((reaction.attrib['name'],
-                                           child.attrib['species'],
-                                           abs(int(child.attrib['stoichiometry']))))
-            elif "listOfReactants" in str(reaction[0]):
-                stoichiometric_list.append((reaction.attrib['name'],
-                                           child.attrib['species'],
-                                           -abs(int(child.attrib['stoichiometry']))))
-    return stoichiometric_list
 
 def solve_lp_exact(obj_inds, opt, h_add, h0_add, reaction_ids, lp_prob):
     """
@@ -260,7 +260,7 @@ def update_chull(new_p, epts, chull, dims):
     chull = [i for j, i in enumerate(chull) if j not in to_remove]
     return chull
 
-def compute_CH(lp_data, impt_reactions, reaction_ids, lp_prob):
+def compute_chull(lp_data, impt_reactions, reaction_ids, lp_prob):
     """
     Computes the convex hull for production envelopes of metabolic network. Solution is
     the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
@@ -366,23 +366,28 @@ def initial_hull(pnts, dims): # depends on get_hyperplane
 
 def main():
     """
-    Computes the convex hull for production envelopes of metabolic network. Solution is
-    the list of hyperplanes and set of extreme points of the Convex hull. Inputs are:
-    - reaction_file: absolute path to file containing one reaction name string in each line,
-    the names must be aligned with the columns of the Stoichiometric matrix.
-    - stoichiometric_file: absolute path to file containing Stoichiometric matrix
-    - domain_file: absolute path to file containing lower and upper bounds for each reaction,
-    one pair in a line
-    - input_reactions: list of indices for the dimensions onto which the CH should be computed
+    main procedure using functions from above. the program needs five inputs from stdin,
+    which will be processed.
+    - reaction_file: absolute path to file with one reaction name string in each line.
+    - stoichiometric_file: absolute path to file with stoichiometric values for the reactions.
+    - domain_file: absolute path to file with lower and upper bounds for each reaction.
+    - dimensionality: int for projection dimensionality
     """
     # a parser for easier operations with the program
     parser = argparse.ArgumentParser(description='Calculate the convex set of given network')
-    parser.parse_args()
-    # given information
-    reaction_file = "/home/dherzig/ConvHull/DATA/toy/toy_reactions.txt"
-    stoichiometric_file = "/home/dherzig/ConvHull/DATA/toy/toy_stoichs.txt"
-    domain_file = "/home/dherzig/ConvHull/DATA/toy/toy_domains.txt"
-    input_reactions = [0, 1]
+    parser.add_argument("reaction_file", type=str,
+                        help="path to file containing reaction ids line by line.")
+    parser.add_argument("stoichiometric_file", type=str,
+                        help="path to file containing stoichiometrics of reactions.")
+    parser.add_argument("domain_file", type=str,
+                        help="path to file containing upper and lower bounds.")
+    parser.add_argument("dimensionality", type = int,
+                        help="dimension N onto which convhull shall be projected.")
+    arguments = parser.parse_args()
+    reaction_file = arguments.reaction_file
+    stoichiometric_file = arguments.stoichiometric_file
+    domain_file = arguments.domain_file
+    input_reactions = list(range(arguments.dimensionality))
     # create dictionary from the above files for further processing
     problem_read = read_problem(reaction_file,
                                 stoichiometric_file,
@@ -396,17 +401,17 @@ def main():
                                 objective)
     # extract reaction ids, to get rid off the global statements within functions
     reaction_ids = problem_read["rids"]
-    chull, epts = compute_CH(problem_read,
-                             input_reactions,
-                             reaction_ids,
-                             problem_created)
+    chull, epts = compute_chull(problem_read,
+                                input_reactions,
+                                reaction_ids,
+                                problem_created)
     # refine results
     refined_chull, refined_epts = incremental_refinement(chull,
                                                          epts,
                                                          input_reactions,
                                                          reaction_ids,
                                                          problem_created)
-    print("refined convex hull after refinement:")
+    print("refined convex hull:")
     print(refined_chull)
     print("refined set of points:")
     print(refined_epts)
