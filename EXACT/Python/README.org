@@ -949,7 +949,7 @@ if __name__ == "__main__":
 
 
       initital problem:
-      {'rids': ['R1', 'R2', 'R3'], 'domain': [[0, -1, 0], [3, 1000, 2]], 'Aeq': Matrix([[1, -1, -1]]), 'beq': Matrix([[0]])}
+      {'rids': ['R1', 'R2', 'R3'], 'domain': [[0, -1, 0], [3, 1000, 2]], 'Aeq': Matrix([[1.0, -1.0, -1.0]]), 'beq': Matrix([[0]])}
 
       projecting hull onto 2 dimensions.
 
