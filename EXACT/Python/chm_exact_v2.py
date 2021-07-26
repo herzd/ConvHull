@@ -56,11 +56,11 @@ def extract_stoichiometry(model):
             if "listOfProducts" in str(reaction[0]):
                 stoichiometric_list.append((reaction.attrib['name'],
                                            child.attrib['species'],
-                                           abs(int(child.attrib['stoichiometry']))))
+                                           float(child.attrib['stoichiometry'])))
             elif "listOfReactants" in str(reaction[0]):
                 stoichiometric_list.append((reaction.attrib['name'],
                                            child.attrib['species'],
-                                           -abs(int(child.attrib['stoichiometry']))))
+                                           -1*float(child.attrib['stoichiometry'])))
     return stoichiometric_list
 
 def extract_parameters(model):
