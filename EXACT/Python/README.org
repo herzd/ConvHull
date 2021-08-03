@@ -644,7 +644,7 @@ def read_problem(reactions_file, stoichiometrics_file, domains_file):
     upper_bounds = []
     with open(domains_file, "r") as file_to_read:
         for line in file_to_read.readlines():
-            info = line.strip()
+            line = line.strip()
             info = line.split()
             lower_bounds.append(int(info[0]))
             upper_bounds.append(int(info[1]))

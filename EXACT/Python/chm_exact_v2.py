@@ -2,7 +2,7 @@
 """ library of functions for the exact convhull python algorithm"""
 
 import argparse
-import fractions
+from fractions import Fraction
 import gzip
 import os
 import sys
@@ -10,6 +10,62 @@ import urllib
 import xml.etree.ElementTree
 import qsoptex
 import sympy
+
+def get_plane_equation(p1,p2,p3):
+    '''takes three points given as lists or tuples and
+    returns the parameters of the equation of the corresponding
+    plane as tuple of four Fraction objects (the first three values make up the normal 
+    vector onto the plane)'''
+    point1 = numpy.array([Fraction(str(number)) for number in p1])
+    point2 = numpy.array([Fraction(str(number)) for number in p2])
+    point3 = numpy.array([Fraction(str(number)) for number in p3])
+    vector1,vector2 = point3-point1,point2-point1
+    normal_vector = numpy.cross(vector1,vector2)
+    a,b,c = normal_vector
+    d = numpy.dot(normal_vector,point3)
+    return a,b,c,d
+
+def intersect_planes(plane1,plane2):
+    '''takes two planes, described as equation through its 4 parameters as tuples
+    or lists of fraction objects, and returns a point on and the direction vector of 
+    their intersection as a tuple of two lists with 3 fraction objects each.'''
+    normal_vector1 = numpy.array(plane1[:3])
+    normal_vector2 = numpy.array(plane2[:3])
+    direction_vector = list(numpy.cross(normal_vector1,
+                                        normal_vector2))
+    a1,b1,d1 = plane1[0],plane1[1],plane1[3]
+    a2,b2,d2 = plane2[0],plane2[1],plane2[3]
+    x,y = sympy.symbols('x,y')
+    equation_plane1 = sympy.Eq(a1*x+b1*y,d1)
+    equation_plane2 = sympy.Eq(a2*x+b2*y,d2)
+    point_on_both_planes_sympy = list(sympy.solve([equation_plane1,
+                                                   equation_plane2],
+                                                  (x,y)).values())
+    point_on_both_planes_sympy.append(0)
+    point_on_both_planes_fractions = [Fraction(str(number))
+                                      for number in point_on_both_planes_sympy]
+    return point_on_both_planes_fractions, direction_vector
+
+def intersect_planes_v2(plane1,plane2):
+    '''takes two planes, described as equation through its 4 parameters as tuples
+    or lists of fraction objects, and returns a point on and the direction vector of 
+    their intersection as a tuple of two lists with 3 fraction objects each.'''
+    normal_vector1 = numpy.array(plane1[:3])
+    normal_vector2 = numpy.array(plane2[:3])
+    direction_vector = list(numpy.cross(normal_vector1,
+                                        normal_vector2))
+    a1,b1,d1 = plane1[0],plane1[1],plane1[3]
+    a2,b2,d2 = plane2[0],plane2[1],plane2[3]
+    x,y = sympy.symbols('x,y')
+    equation_plane1 = sympy.Eq(a1*x+b1*y,d1)
+    equation_plane2 = sympy.Eq(a2*x+b2*y,d2)
+    point_on_both_planes_sympy = list(sympy.solve([equation_plane1,
+                                                   equation_plane2],
+                                                  (x,y)).values())
+    point_on_both_planes_sympy.append(0)
+    point_on_both_planes_fractions = [Fraction(str(number))
+                                      for number in point_on_both_planes_sympy]
+    return point_on_both_planes_fractions, direction_vector
 
 def download_model(url):
     '''downloads existing model from the web, url has to be a string.
@@ -179,7 +235,7 @@ def read_problem(reactions_file, stoichiometrics_file, domains_file):
     upper_bounds = []
     with open(domains_file, "r") as file_to_read:
         for line in file_to_read.readlines():
-            info = line.strip()
+            line = line.strip()
             info = line.split()
             lower_bounds.append(int(info[0]))
             upper_bounds.append(int(info[1]))
